@@ -1,0 +1,71 @@
+name: Waza Trigger Evals
+
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "evals/**"
+      - ".waza.yaml"
+      - ".github/workflows/waza-eval.yml"
+      - "test/waza-coverage.test.mjs"
+  push:
+    branches: [main]
+    paths:
+      - "skills/**"
+      - "evals/**"
+      - ".waza.yaml"
+      - ".github/workflows/waza-eval.yml"
+      - "test/waza-coverage.test.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Waza
+        env:
+          WAZA_VERSION: "0.38.7"
+          WAZA_SHA256: "e227cd884173de796bc28c6cb1828498f250297e0e606a4e4504d14465ff879f"
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin"
+          mkdir -p "$bin"
+          curl --fail --location --silent --show-error \
+            --retry 5 --retry-all-errors --retry-delay 3 \
+            "https://github.com/microsoft/waza/releases/download/v${WAZA_VERSION}/waza-linux-amd64" \
+            --output "$bin/waza"
+          echo "${WAZA_SHA256}  $bin/waza" | sha256sum --check -
+          chmod +x "$bin/waza"
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: Verify requirement coverage
+        env:
+          WAZA_NO_UPDATE_CHECK: "1"
+        run: |
+          set -euo pipefail
+          for skill in skills/*; do
+            [ -f "$skill/SKILL.md" ] || continue
+            id=${skill#skills/}
+            waza spec verify \
+              --skill "$skill" \
+              --eval "evals/$id/eval.yaml" \
+              --format github-actions \
+              --fail
+          done
+
+      - name: Run deterministic trigger evals
+        env:
+          WAZA_NO_UPDATE_CHECK: "1"
+        run: |
+          waza run \
+            --output-dir "$RUNNER_TEMP/waza-results" \
+            --no-cache \
+            --no-summary
