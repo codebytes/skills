@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "templateVersion": 1,
+  "owner": {
+    "login": "codebytes",
+    "name": "Chris Ayers",
+    "url": "https://github.com/codebytes"
+  },
+  "repository": {
+    "name": "skills",
+    "url": "https://github.com/codebytes/skills",
+    "visibility": "public"
+  },
+  "package": {
+    "name": "codebytes-skills",
+    "displayName": "Codebytes Skills",
+    "description": "Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.",
+    "version": "1.0.0"
+  },
+  "catalog": {
+    "enabled": true,
+    "template": "skills-catalog"
+  },
+  "github": {
+    "defaultBranch": "main"
+  }
+}

@@ -1,0 +1,138 @@
+---
+interface Props {
+  href: string;
+  skillId: string;
+  title: string;
+  tagline: string;
+  thumb: string;
+}
+
+const { href, skillId, title, tagline, thumb } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const install = `install ${skillId} from codebytes/skills`;
+const search = `${skillId} ${title} ${tagline}`.toLowerCase();
+---
+
+<article class="skill-card" data-search={search}>
+  <a class="skill-card__link" href={href}>
+    <img class="skill-thumb" src={`${base}${thumb}`} alt="" loading="lazy" width="640" height="360" />
+    <div class="skill-body">
+      <h3>{title}</h3>
+      <p class="skill-tagline muted">{tagline}</p>
+    </div>
+  </a>
+  <div class="skill-foot">
+    <a class="skill-more" href={href}>View skill <span aria-hidden="true">&rarr;</span></a>
+    <button type="button" class="skill-copy" data-install={install} aria-label={`Copy install command for ${title}`}>
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <path d="M10 1.5H6a.5.5 0 0 0-.5.5v1H4A1.5 1.5 0 0 0 2.5 4.5v9A1.5 1.5 0 0 0 4 15h6a1.5 1.5 0 0 0 1.5-1.5v-1h1a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 12 2.5h-1.5v-1a.5.5 0 0 0-.5-.5Zm0 2v.5a.5.5 0 0 0 .5.5H12v7h-1.5a.5.5 0 0 0-.5.5v1H4v-9h1.5a.5.5 0 0 0 .5-.5V3.5h4Z"/>
+      </svg>
+      <span class="skill-copy__label">Copy install</span>
+    </button>
+  </div>
+</article>
+
+<style>
+  .skill-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .skill-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .skill-card[hidden] { display: none; }
+  .skill-card__link {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .skill-thumb {
+    display: block;
+    width: 100%;
+    height: 128px;
+    padding: 0.6rem;
+    object-fit: contain;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .skill-body { flex: 1; min-width: 0; padding: 0.8rem 0.95rem; }
+  .skill-body h3 {
+    margin: 0 0 0.35rem;
+    overflow-wrap: anywhere;
+    font: 700 1rem/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .skill-tagline {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    font-size: 0.9rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .skill-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 0.95rem;
+    border-top: 1px solid var(--border);
+  }
+  .skill-more { color: var(--accent); font-size: 0.88rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .skill-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    color: var(--muted);
+    font: 600 0.78rem/1 system-ui, sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .skill-copy:hover { color: var(--fg); border-color: var(--accent); }
+  .skill-copy.copied { color: #fff; background: var(--accent-solid); border-color: var(--accent-solid); }
+  :global([data-view="list"]) .skill-card { flex-flow: row wrap; align-items: stretch; }
+  :global([data-view="list"]) .skill-card__link { flex: 1 1 320px; flex-direction: row; align-items: center; }
+  :global([data-view="list"]) .skill-thumb {
+    flex: none;
+    width: 96px;
+    height: 68px;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+  }
+  :global([data-view="list"]) .skill-body { padding: 0.55rem 0.9rem; }
+  :global([data-view="list"]) .skill-tagline { -webkit-line-clamp: 1; line-clamp: 1; }
+  :global([data-view="list"]) .skill-foot {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
+  @media (max-width: 560px) {
+    :global([data-view="list"]) .skill-card { flex-direction: column; }
+    :global([data-view="list"]) .skill-card__link { flex-direction: column; }
+    :global([data-view="list"]) .skill-thumb {
+      width: 100%;
+      height: 128px;
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    :global([data-view="list"]) .skill-foot {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      border-left: 0;
+    }
+  }
+</style>

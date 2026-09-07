@@ -1,0 +1,18 @@
+id: positive-trigger-001
+name: Analyze CSV quality
+description: >-
+  Analyze CSV files and generate statistical data quality reports. Covers: analyze CSV files,
+  profile tabular data, inspect CSV quality, generate CSV reports.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Analyze this CSV file, profile its columns, and generate a data quality report."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-csv-analysis
+    config:
+      skill_path: skills/csv-analysis/SKILL.md
+      mode: positive
+      threshold: 0.6

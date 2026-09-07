@@ -1,0 +1,26 @@
+{
+  "name": "pptx-to-marp-theme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Development tooling for the pptx-to-marp-theme skill.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "scripts": {
+    "extract": "python3 scripts/extract_pptx_theme.py",
+    "apply": "python3 scripts/apply_marp_theme.py",
+    "test": "node --test test/*.test.mjs && python3 -m unittest discover -s test -p 'test_*.py'",
+    "eval:lint": "vally lint --eval-spec evals/pptx-to-marp-theme/eval.yaml --strict",
+    "eval": "vally eval --eval-spec evals/pptx-to-marp-theme/eval.yaml --skill-dir ."
+  },
+  "devDependencies": {
+    "@microsoft/vally-cli": "0.14.0"
+  },
+  "allowScripts": {
+    "@vscode/deviceid": false,
+    "better-sqlite3": false,
+    "koffi": false
+  }
+}

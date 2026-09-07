@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "hashVersion": 1,
+  "templateVersion": 1,
+  "files": {
+    ".agents/plugins/marketplace.json": {
+      "sha256": "69dac756262d8f1bfd6180d09178033b9b1e231b5e22810baa5b956f12ecd386",
+      "normalization": "lf"
+    },
+    ".claude-plugin/marketplace.json": {
+      "sha256": "ec220336df92d8f97ff6eaa976249c42cb57e0001fc190b1e52b8300e17b3479",
+      "normalization": "lf"
+    },
+    ".claude-plugin/plugin.json": {
+      "sha256": "40e64a9e6725f45350bd1e39c894c590eab096a06460527d5e76140e7a49b0df",
+      "normalization": "lf"
+    },
+    ".codex-plugin/plugin.json": {
+      "sha256": "40e64a9e6725f45350bd1e39c894c590eab096a06460527d5e76140e7a49b0df",
+      "normalization": "lf"
+    },
+    ".cursor-plugin/marketplace.json": {
+      "sha256": "029d9f0232deb2f81b94f14deb03c496251cca8c16ec26dffebb6578c1f44ab1",
+      "normalization": "lf"
+    },
+    ".gitattributes": {
+      "sha256": "baca8a2332e6f9103b9419e2a36ff9c4ef4fe53be5536fe711a56919783cdbfd",
+      "normalization": "lf"
+    },
+    ".github/dependabot.yml": {
+      "sha256": "0276fb313c56f3b7d143dc1259d1ea02512269f7110464e0e334e81966d361b7",
+      "normalization": "lf"
+    },
+    ".github/tools/vally/package-lock.json": {
+      "sha256": "28785d0a4651ed9ac1bb1f33ecd89f9ae6e6fdf196552c440d79bea3a0cbd870",
+      "normalization": "lf"
+    },
+    ".github/tools/vally/package.json": {
+      "sha256": "9f26b27f663906f2cc4255b2cdec4f4910000605bb167d6fc2a260ff857002d5",
+      "normalization": "lf"
+    },
+    ".github/workflows/skill-eval.yml": {
+      "sha256": "523760e1c0df10f5f448aa6f7637d9438bbcb0b9447a6d7083073244f307f707",
+      "normalization": "lf"
+    },
+    ".github/workflows/skill-lint.yml": {
+      "sha256": "f5d3292a0163cf9ed9f80f6a706f87950fa329ae3a0252e2dbaa5f235bd668c4",
+      "normalization": "lf"
+    },
+    ".gitignore": {
+      "sha256": "4db66bdbff124843c4e35a5f6c27baea9cd058ed02828b9b8eda7375c4915725",
+      "normalization": "lf"
+    },
+    ".vally.yaml": {
+      "sha256": "23b6337e4df02785fccedcec117483c0a6dbe179b001c1d458bfc31ac7539464",
+      "normalization": "lf"
+    },
+    "LICENSE": {
+      "sha256": "f63e6a24ecaf24a97137fa50bda61c253455663e2e9e570c79e723e5e08afae4",
+      "normalization": "lf"
+    },
+    "README.md": {
+      "sha256": "9b11f0478941715bb8569eb7497f2bb4383e91cb3f58bc7f7d9a254532daad5d",
+      "normalization": "lf"
+    },
+    "gemini-extension.json": {
+      "sha256": "553deb9baf5ca72555087826e5b96971b4b8bd4536d1fbf8e829a9e0c3900980",
+      "normalization": "lf"
+    },
+    "marketplace.json": {
+      "sha256": "cf3d99dc204ced742fbc2817562182f09feef3472da0f2e48e3d96f97092da25",
+      "normalization": "lf"
+    },
+    "plugin.json": {
+      "sha256": "2e98419655cfff6d35a2611908e45120c5e694d5e380ff0b6f9dbb6294849257",
+      "normalization": "lf"
+    },
+    "skills-repo.config.json": {
+      "sha256": "9de36ef35261852be165f352e87ecb64967384157759eabe7bb119df99865738",
+      "normalization": "lf"
+    },
+    "skills/create-skill/.gitignore": {
+      "sha256": "a76a67889f2f7a31be3a38cfac51c6e01121ec53d1241c60cbf20bef5f19ffa7",
+      "normalization": "lf"
+    },
+    "skills/create-skill/.vally.yaml": {
+      "sha256": "b7df44868bd2f4dd37105b273db05549bcc5ee7223ea209d313bc2a8d4dfb19c",
+      "normalization": "lf"
+    },
+    "skills/create-skill/LICENSE": {
+      "sha256": "fd7a1596835f9d4bb2820db94256f15398c2029e01698ad3e59ae342f149b008",
+      "normalization": "lf"
+    },
+    "skills/create-skill/README.md": {
+      "sha256": "dbc4a76552c8a2c1863605ee3ecb41a2f454ddc1e61266fae78d0976186d763c",
+      "normalization": "lf"
+    },
+    "skills/create-skill/SKILL.md": {
+      "sha256": "aebe3627216123a54b83ade505d3cbbffdfcd71f1b47a70e46e42b76a54b706e",
+      "normalization": "lf"
+    },
+    "skills/create-skill/evals/README.md": {
+      "sha256": "af7fa82c3c02c5a095ae4e8981d90614558a70dc58a28296361f89881d41b65a",
+      "normalization": "lf"
+    },
+    "skills/create-skill/evals/create-skill/eval.yaml": {
+      "sha256": "ed944f55562bc6a3ae09251b51725ff77deb3eefc4991c8575e451e48f7742d3",
+      "normalization": "lf"
+    },
+    "skills/create-skill/package-lock.json": {
+      "sha256": "b2eabfefb194e6188d7fcabb6799551389738fd800ccc61fbe7701cdfa4a1f96",
+      "normalization": "lf"
+    },
+    "skills/create-skill/package.json": {
+      "sha256": "5ceadc05dfd1f5b294acee7d719f5578b90c8ad78c902014c6fe4c362654ff41",
+      "normalization": "lf"
+    },
+    "skills/create-skill/references/art-and-provenance.md": {
+      "sha256": "907453d2da9f756ee703087515bf53f43fcda41684232944db289663f43599e7",
+      "normalization": "lf"
+    },
+    "skills/create-skill/references/fixture-mode.md": {
+      "sha256": "a30167108feb76dfeec87ccf663daac0bcf06755acb621b056b03c4c0c800130",
+      "normalization": "lf"
+    },
+    "skills/create-skill/references/repository-discovery.md": {
+      "sha256": "966b94f029054fc80cd653a5e5299e5f4de3fa66386fe11a6a0edf88c5aed265",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/art.mjs": {
+      "sha256": "4cf5f157e392484b9b6a7cd1b5e9605c7bdede8408eb7d5ee35243131b5e7088",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/create-skill.mjs": {
+      "sha256": "5f38a454903a5f2138802cd2125d4e8fd908631fbf790f144eb69df2892f6725",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/png.mjs": {
+      "sha256": "3cc2a03edaba898abf6d9235a517904be8b9955936647e9414e9ba0378d0cbda",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/providers.mjs": {
+      "sha256": "0124470a462aca1b7569ebfb514c25d6ce651931d309f57d84e16e561a5768b8",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/registration.mjs": {
+      "sha256": "14c2579160fc8e943d1022e859b856e0722c60070e583753d82e2758c7408c4b",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/render.mjs": {
+      "sha256": "38e629d02b821ce8f96f2916b1a1f99d8ea21fe6e75de6da3455530297519ad5",
+      "normalization": "lf"
+    },
+    "skills/create-skill/scripts/repository.mjs": {
+      "sha256": "79818b75571b270fc57e6f6e4e40ef132cd7916ec1e125659f28b3a3ec2a79d4",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/art.test.mjs": {
+      "sha256": "0b4ab723e8175b1e39971eb50721c5718d7f7fe60e6b1164e4448ff2813ccae8",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/cli.test.mjs": {
+      "sha256": "64b5dd5ca02f3ba6488d3579120f348d3a8b20a063d63940106c7ecfa7d7bbca",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/helpers.mjs": {
+      "sha256": "d03c237f5010c2468ac29487b6e87834d5ddea7db3bbed4b1fe06382d469d953",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/png.test.mjs": {
+      "sha256": "e6ed299327fcc437a88247572389defbbe27c7ebbcedcea9314b8258c4fb589e",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/providers.test.mjs": {
+      "sha256": "f93ea1f7c09c6e861c36b47445b8eeab53d84b35ddb87bd49d42316bfa6f839f",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/registration.test.mjs": {
+      "sha256": "ad23e227c926f4dd0548eb218ffbdef41e1b52c16440a6ed11fbd0132da958e5",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/render.test.mjs": {
+      "sha256": "c82c119a0db432b159dc6b796a063a0f2af28b97b42fd41325e7b4eb89952f51",
+      "normalization": "lf"
+    },
+    "skills/create-skill/test/repository.test.mjs": {
+      "sha256": "666f8db15a80a0fbe3b6d083c7cb076df64cf60cca62fa9c9eafd5d7e29fb6fe",
+      "normalization": "lf"
+    },
+    "skills/create-skill/thumbnail.png": {
+      "sha256": "f1eb662a7758b40b53f6ff17c8af7c02d6920217e541cd746b8d7af36e8291a1",
+      "normalization": "raw"
+    },
+    "test/distribution-manifests.test.mjs": {
+      "sha256": "e224c99035ad526be9a3fece7dd87694351cb904882978f531e5fbaaf534b55f",
+      "normalization": "lf"
+    }
+  }
+}

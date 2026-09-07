@@ -1,0 +1,19 @@
+id: negative-trigger-001
+name: Reject neighboring workflows
+description: >-
+  DO NOT USE FOR: scaffolding a new marketplace collection from scratch (use
+  create-skills-repo), editing one existing skill instruction without registration work (use
+  skill-authoring), creating an agent persona.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Scaffold a brand-new multi-skill marketplace repository from scratch."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: does-not-trigger-create-skill
+    config:
+      skill_path: skills/create-skill/SKILL.md
+      mode: negative
+      threshold: 0.9

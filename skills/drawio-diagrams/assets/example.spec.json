@@ -1,0 +1,18 @@
+{
+  "title": "Marp publishing workflow",
+  "description": "A build, review, fix, and publish workflow for a Marp slide deck.",
+  "nodes": [
+    { "id": "start", "label": "Start", "x": 200, "y": 40, "width": 140, "height": 50, "shape": "ellipse", "fill": "#d5e8d4", "stroke": "#82b366" },
+    { "id": "build", "label": "Build slides\n(Marp CLI)", "x": 200, "y": 140, "width": 140, "height": 60, "shape": "rounded", "fill": "#dae8fc", "stroke": "#6c8ebf" },
+    { "id": "review", "label": "Review for\noverflow", "x": 200, "y": 250, "width": 140, "height": 70, "shape": "diamond", "fill": "#fff2cc", "stroke": "#d6b656" },
+    { "id": "ok", "label": "Publish to\nGitHub Pages", "x": 200, "y": 390, "width": 140, "height": 60, "shape": "rounded", "fill": "#d5e8d4", "stroke": "#82b366" },
+    { "id": "fix", "label": "Fix slide", "x": 430, "y": 255, "width": 120, "height": 60, "shape": "rounded", "fill": "#fff2cc", "stroke": "#d6b656" }
+  ],
+  "edges": [
+    { "source": "start", "target": "build", "orthogonal": true },
+    { "source": "build", "target": "review", "orthogonal": true },
+    { "source": "review", "target": "ok", "label": "pass", "orthogonal": true },
+    { "source": "review", "target": "fix", "label": "overflow", "orthogonal": true },
+    { "source": "fix", "target": "review", "dashed": true, "orthogonal": true }
+  ]
+}

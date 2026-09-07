@@ -1,0 +1,18 @@
+id: negative-trigger-001
+name: Reject authoring and visual generation
+description: >-
+  DO NOT USE FOR: authoring slide content; use marp-authoring, or generating chart and diagram
+  assets; use marp-visuals.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Write a new presentation narrative and generate a bar chart asset."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: does-not-trigger-marp-slide-review
+    config:
+      skill_path: skills/marp-slide-review/SKILL.md
+      mode: negative
+      threshold: 0.9

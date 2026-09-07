@@ -1,0 +1,16 @@
+{
+  "name": "codebytes-skills",
+  "description": "Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.",
+  "owner": {
+    "name": "Chris Ayers",
+    "url": "https://github.com/codebytes"
+  },
+  "plugins": [
+    {
+      "name": "codebytes-skills",
+      "source": "./",
+      "description": "Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.",
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+id: negative-trigger-001
+name: Reject slide editing and editable diagrams
+description: >-
+  DO NOT USE FOR: editing slide narrative or layout; use marp-authoring, or creating diagrams that
+  must remain editable in draw.io; use drawio-diagrams.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Rewrite the deck narrative and make an editable draw.io architecture diagram."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: does-not-trigger-marp-visuals
+    config:
+      skill_path: skills/marp-visuals/SKILL.md
+      mode: negative
+      threshold: 0.9

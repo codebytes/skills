@@ -1,0 +1,68 @@
+{
+  "title": "Choose the right slide visual",
+  "description": "A decision flow routes quantitative evidence, standard diagrams, and editable architecture to the appropriate visual format.",
+  "padding": 30,
+  "nodes": [
+    {
+      "id": "start",
+      "label": "Need a visual",
+      "x": 30,
+      "y": 180,
+      "width": 150,
+      "height": 70,
+      "shape": "ellipse",
+      "fill": "#d5e8d4",
+      "stroke": "#82b366"
+    },
+    {
+      "id": "question",
+      "label": "What must the\naudience understand?",
+      "x": 260,
+      "y": 160,
+      "width": 190,
+      "height": 110,
+      "shape": "diamond",
+      "fill": "#fff2cc",
+      "stroke": "#d6b656"
+    },
+    {
+      "id": "chart",
+      "label": "Static SVG chart",
+      "x": 570,
+      "y": 30,
+      "width": 180,
+      "height": 70,
+      "shape": "rounded",
+      "fill": "#dae8fc",
+      "stroke": "#6c8ebf"
+    },
+    {
+      "id": "mermaid",
+      "label": "Mermaid SVG",
+      "x": 570,
+      "y": 160,
+      "width": 180,
+      "height": 70,
+      "shape": "rounded",
+      "fill": "#dae8fc",
+      "stroke": "#6c8ebf"
+    },
+    {
+      "id": "drawio",
+      "label": "Editable draw.io",
+      "x": 570,
+      "y": 290,
+      "width": 180,
+      "height": 70,
+      "shape": "rounded",
+      "fill": "#e1d5e7",
+      "stroke": "#9673a6"
+    }
+  ],
+  "edges": [
+    { "source": "start", "target": "question", "orthogonal": true },
+    { "source": "question", "target": "chart", "label": "quantitative", "orthogonal": true },
+    { "source": "question", "target": "mermaid", "label": "process", "orthogonal": true },
+    { "source": "question", "target": "drawio", "label": "editable", "orthogonal": true }
+  ]
+}

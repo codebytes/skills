@@ -1,0 +1,19 @@
+id: negative-trigger-001
+name: Reject throwaway and specialist diagrams
+description: >-
+  DO NOT USE FOR: quick throwaway diagrams that do not need draw.io editability; use Mermaid
+  instead, or complex cloud/UML diagrams that require full draw.io shape libraries; use draw.io
+  Desktop or jgraph/drawio-mcp.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Make a quick text-only Mermaid sequence diagram that does not need visual editing."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: does-not-trigger-drawio-diagrams
+    config:
+      skill_path: skills/drawio-diagrams/SKILL.md
+      mode: negative
+      threshold: 0.9

@@ -1,0 +1,68 @@
+---
+import Layout from "../layouts/Layout.astro";
+import SkillGrid from "../components/SkillGrid.astro";
+import { getCollection } from "astro:content";
+
+const base = import.meta.env.BASE_URL;
+const skills = (await getCollection("skills")).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Layout wide>
+  <header class="hero">
+    <p class="eyebrow">Reusable skills for AI coding agents</p>
+    <h1>Codebytes Skills Catalog</h1>
+    <p class="lede">Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.</p>
+    <div class="cta">
+      <a class="btn" href={`${base}catalog/`}>Browse skills</a>
+      <a class="btn btn-ghost" href="https://github.com/codebytes/skills">View on GitHub</a>
+    </div>
+    <pre class="hero-cmd"><code>npx skills add codebytes/skills --all</code></pre>
+  </header>
+
+  <section aria-labelledby="featured-skills">
+    <div class="section-head">
+      <h2 id="featured-skills">Skills</h2>
+      <a href={`${base}catalog/`}>Browse all <span aria-hidden="true">&rarr;</span></a>
+    </div>
+    <SkillGrid skills={skills} search={false} />
+  </section>
+
+  <section class="card install-card">
+    <h2>Install</h2>
+    <h3>Ask your agent</h3>
+    <pre><code>install codebytes/skills</code></pre>
+    <h3>Skills CLI</h3>
+    <pre><code>npx skills add codebytes/skills --list
+npx skills add codebytes/skills --all</code></pre>
+    <h3>Plugin marketplace</h3>
+    <pre><code>copilot plugin marketplace add codebytes/skills
+    copilot plugin install marp-authoring@codebytes-skills</code></pre>
+    <p class="muted">After installation, reload skills in your agent or start a new session.</p>
+  </section>
+</Layout>
+
+<style>
+  .hero { margin: 1rem 0 2.5rem; text-align: center; }
+  .eyebrow { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .hero h1 { margin: 0 0 0.75rem; font: 700 clamp(2rem, 6vw, 3rem)/1.1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lede { max-width: 56ch; margin: 0 auto 1.4rem; color: var(--muted); font-size: 1.12rem; }
+  .cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-bottom: 1.4rem; }
+  .btn-ghost { color: var(--fg); background: var(--panel); border-color: var(--border); }
+  .hero-cmd {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.7rem 1rem;
+    margin: 0 auto;
+    overflow-x: auto;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+  }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .section-head h2 { margin: 0; font-size: 1.4rem; }
+  .section-head a { font-size: 0.92rem; font-weight: 600; text-decoration: none; }
+  .install-card { max-width: 860px; margin: 2.5rem auto 0; }
+  .install-card h3 { margin: 1.1rem 0 0.4rem; font-size: 1rem; }
+  .install-card pre { padding: 0.7rem 0.9rem; overflow-x: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; }
+</style>

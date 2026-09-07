@@ -1,0 +1,46 @@
+name: marp-visuals
+description: >-
+  Capability eval for the marp-visuals skill. The agent must follow the documented workflow,
+  preserve safety boundaries, and verify its result.
+type: capability
+
+defaults:
+  runs: 1
+  timeout: 10m
+  executor: copilot-sdk
+
+scoring:
+  weights:
+    prompt: 0.8
+    skill-invocation: 0.2
+  threshold: 0.8
+
+stimuli:
+  - name: selects-and-builds-reproducible-visuals
+    prompt: >-
+      Use the marp-visuals skill for a deck that needs a quarterly adoption chart and a service
+      request flow. Explain which visual format you would choose for each, what source files and
+      generated assets you would create, how you would handle labels and accessibility, and how
+      you would avoid runtime Mermaid in PDF output. Do not perform repository writes.
+    tags:
+      scenario: workflow
+      cost: low
+    rubric:
+      - Chooses a quantitative chart for adoption and Mermaid for the request flow.
+      - Preserves chart data and Mermaid source beside generated SVG assets.
+      - Requires labels, units, source attribution, alt text, and readable contrast.
+      - Pre-renders Mermaid and hands the completed slides to marp-slide-review.
+    graders:
+      - type: prompt
+        name: complete-safe-workflow
+        config:
+          scoring: scale_1_5
+          threshold: 0.75
+          prompt: >-
+            Score 5 only if the response chooses appropriate visual forms, preserves source and
+            provenance, creates static SVG outputs, avoids invented data and runtime Mermaid,
+            addresses accessibility, and includes rendered review. Score 1 if it proposes a
+            screenshot-only or CDN-only result without reproducible source.
+      - type: skill-invocation
+        config:
+          required: [marp-visuals]

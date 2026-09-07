@@ -1,0 +1,19 @@
+id: positive-trigger-001
+name: Create static Marp visuals
+description: >-
+  Create deterministic charts, Mermaid diagrams, graphs, and accessible static visual assets for
+  Marp decks. Covers: add a chart to slides, build a graph, create a Mermaid diagram, turn data
+  into a slide visual, generate SVG assets for Marp.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Turn this quarterly data into an accessible static SVG chart for my Marp slides."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-marp-visuals
+    config:
+      skill_path: skills/marp-visuals/SKILL.md
+      mode: positive
+      threshold: 0.6

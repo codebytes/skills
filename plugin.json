@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "codebytes-skills",
+  "description": "Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Chris Ayers",
+    "url": "https://github.com/codebytes"
+  },
+  "license": "MIT",
+  "keywords": [
+  "skills",
+  "agent-skills",
+  "create-skill",
+  "csv-analysis",
+  "drawio-diagrams",
+  "marp-authoring",
+  "marp-slide-review",
+  "marp-visuals",
+  "pptx-to-marp-theme"
+],
+  "repository": "https://github.com/codebytes/skills"
+}

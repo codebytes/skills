@@ -1,0 +1,21 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import SkillGrid from "../../components/SkillGrid.astro";
+import { getCollection } from "astro:content";
+
+const skills = (await getCollection("skills")).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Layout wide title={`Skills | Codebytes Skills Catalog`} description="Search and install skills from Codebytes Skills Catalog.">
+  <header class="page-head">
+    <h1>Skills</h1>
+    <p class="muted">Search the catalog, switch layouts, and copy an install command.</p>
+  </header>
+  <SkillGrid skills={skills} />
+</Layout>
+
+<style>
+  .page-head { margin-bottom: 1.75rem; text-align: center; }
+  .page-head h1 { margin: 0 0 0.5rem; font-size: clamp(1.75rem, 5vw, 2.5rem); }
+  .page-head p { margin: 0; }
+</style>

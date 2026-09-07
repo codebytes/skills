@@ -1,0 +1,27 @@
+{
+  "name": "marp-visuals",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Development tooling for the marp-visuals skill.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "scripts": {
+    "chart": "node scripts/chart-to-svg.mjs",
+    "mermaid": "node scripts/render-mermaid.mjs",
+    "test": "node --test test/*.test.mjs",
+    "eval:lint": "vally lint --eval-spec evals/marp-visuals/eval.yaml --strict",
+    "eval": "vally eval --eval-spec evals/marp-visuals/eval.yaml --skill-dir ."
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.16.0",
+    "@microsoft/vally-cli": "0.14.0"
+  },
+  "allowScripts": {
+    "@vscode/deviceid": false,
+    "better-sqlite3": false,
+    "koffi": false
+  }
+}

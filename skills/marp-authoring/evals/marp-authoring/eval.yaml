@@ -1,0 +1,46 @@
+name: marp-authoring
+description: >-
+  Capability eval for the marp-authoring skill. The agent must follow the documented workflow,
+  preserve safety boundaries, and verify its result.
+type: capability
+
+defaults:
+  runs: 1
+  timeout: 10m
+  executor: copilot-sdk
+
+scoring:
+  weights:
+    prompt: 0.8
+    skill-invocation: 0.2
+  threshold: 0.8
+
+stimuli:
+  - name: revises-deck-without-losing-structure
+    prompt: >-
+      Use the marp-authoring skill to plan a revision where a user asks to add an architecture
+      slide, split an overcrowded comparison slide, and add speaker notes. Explain the operations,
+      which existing layouts you would inspect, when marp-visuals should be used, and how you
+      would verify that directives and notes were preserved. Do not perform repository writes.
+    tags:
+      scenario: workflow
+      cost: low
+    rubric:
+      - Inspects the existing deck and theme before selecting layouts.
+      - Moves complete slide blocks with directives and notes preserved.
+      - Delegates the architecture asset to marp-visuals or drawio-diagrams.
+      - Uses deck inspection followed by marp-slide-review for verification.
+    graders:
+      - type: prompt
+        name: complete-safe-workflow
+        config:
+          scoring: scale_1_5
+          threshold: 0.75
+          prompt: >-
+            Score 5 only if the response describes concrete slide operations, preserves
+            frontmatter, directives, notes, and assets, chooses existing layouts before custom
+            markup, delegates visual generation correctly, and includes inspection plus rendered
+            review. Score 1 if it treats slides as unstructured text or silently drops content.
+      - type: skill-invocation
+        config:
+          required: [marp-authoring]

@@ -1,0 +1,18 @@
+id: negative-trigger-001
+name: Reject PowerPoint editing and narrative rewriting
+description: >-
+  DO NOT USE FOR: editing PowerPoint slide content; use PPTX tooling, or rewriting Marp slide
+  narrative; use marp-authoring.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Edit the text and shapes inside this PowerPoint, then rewrite the presentation story."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: does-not-trigger-pptx-to-marp-theme
+    config:
+      skill_path: skills/pptx-to-marp-theme/SKILL.md
+      mode: negative
+      threshold: 0.9

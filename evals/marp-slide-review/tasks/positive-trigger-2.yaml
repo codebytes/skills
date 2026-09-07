@@ -1,0 +1,16 @@
+id: positive-trigger-002
+name: Inspect overflow and PDF parity
+description: Render every slide to PNG and compare representative PDF pages.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Check slide overflow, inspect all rendered slides, and compare the PDF output."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-marp-slide-review
+    config:
+      skill_path: skills/marp-slide-review/SKILL.md
+      mode: positive
+      threshold: 0.6

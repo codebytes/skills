@@ -1,0 +1,45 @@
+name: marp-slide-review
+description: >-
+  Capability eval for the marp-slide-review skill. The agent must follow the documented workflow,
+  preserve safety boundaries, and verify its result.
+type: capability
+
+defaults:
+  runs: 1
+  timeout: 10m
+  executor: copilot-sdk
+
+scoring:
+  weights:
+    prompt: 0.8
+    skill-invocation: 0.2
+  threshold: 0.8
+
+stimuli:
+  - name: reviews-overflow-visuals-and-pdf
+    prompt: >-
+      Use the marp-slide-review skill to review a trusted deck with local images, a dense
+      comparison slide, and a runtime Mermaid diagram. Explain the commands, what must be
+      inspected in the PNG gallery, how PDF parity is checked, and which issues should be handed
+      to marp-authoring or marp-visuals. Do not perform repository writes.
+    tags:
+      scenario: workflow
+      cost: low
+    rubric:
+      - Runs both structural overflow and rendered PNG review.
+      - Inspects every slide and identifies PDF-specific checks.
+      - Reports runtime Mermaid as a deterministic-rendering risk.
+      - Delegates content and asset fixes to the correct sibling skills.
+    graders:
+      - type: prompt
+        name: complete-safe-workflow
+        config:
+          scoring: scale_1_5
+          threshold: 0.75
+          prompt: >-
+            Score 5 only if the response combines overflow measurement, complete PNG inspection,
+            representative PDF comparison, dynamic-content warnings, issue reporting by slide,
+            and correct delegation. Score 1 if it treats a successful build as sufficient review.
+      - type: skill-invocation
+        config:
+          required: [marp-slide-review]

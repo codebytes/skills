@@ -1,0 +1,193 @@
+---
+import SkillCard from "./SkillCard.astro";
+
+interface SkillEntry {
+  id: string;
+  data: { title: string; tagline: string; thumb: string };
+}
+
+interface Props {
+  skills: SkillEntry[];
+  search?: boolean;
+}
+
+const { skills, search = true } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const total = skills.length;
+---
+
+<div class="skill-view">
+  <div class="view-toolbar">
+    {search && (
+      <div class="view-search">
+        <svg class="view-search__icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M11.74 10.34a6 6 0 1 0-1.4 1.4l3.2 3.2a1 1 0 0 0 1.42-1.42l-3.22-3.18ZM3 7a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z"/>
+        </svg>
+        <input class="view-search__input" type="search" placeholder="Search skills" aria-label="Search skills" autocomplete="off" spellcheck="false" />
+      </div>
+    )}
+    <p class="view-count muted" data-total={total} aria-live="polite">{total} skills</p>
+    <div class="view-switch" role="group" aria-label="Choose skill layout">
+      <button type="button" class="view-btn is-active" data-view-set="grid" aria-label="Grid view" aria-pressed="true" title="Grid view">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/>
+          <rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/>
+        </svg>
+      </button>
+      <button type="button" class="view-btn" data-view-set="list" aria-label="List view" aria-pressed="false" title="List view">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <circle cx="3.5" cy="4" r="1.5"/><circle cx="3.5" cy="10" r="1.5"/><circle cx="3.5" cy="16" r="1.5"/>
+          <rect x="7" y="3" width="11" height="2" rx="1"/><rect x="7" y="9" width="11" height="2" rx="1"/><rect x="7" y="15" width="11" height="2" rx="1"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="skill-grid" data-view="grid">
+    {skills.map((skill) => (
+      <SkillCard
+        href={`${base}catalog/${skill.id}/`}
+        skillId={skill.id}
+        title={skill.data.title}
+        tagline={skill.data.tagline}
+        thumb={skill.data.thumb}
+      />
+    ))}
+  </div>
+  <p class="skill-empty muted" hidden>No skills match your search.</p>
+</div>
+
+<script is:inline>
+  (function () {
+    var view = "grid";
+    try {
+      view = localStorage.getItem("skills-view") === "list" ? "list" : "grid";
+    } catch (error) {
+      console.warn("Could not read the saved catalog view.", error);
+    }
+    document.querySelectorAll(".skill-grid").forEach(function (grid) {
+      grid.setAttribute("data-view", view);
+    });
+    document.querySelectorAll(".view-btn").forEach(function (button) {
+      var active = button.getAttribute("data-view-set") === view;
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.classList.toggle("is-active", active);
+    });
+  })();
+</script>
+
+<style>
+  .view-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 1.25rem; }
+  .view-search { position: relative; display: flex; flex: 1 1 220px; min-width: 180px; align-items: center; }
+  .view-search__icon { position: absolute; left: 0.7rem; color: var(--muted); pointer-events: none; }
+  .view-search__input {
+    width: 100%;
+    padding: 0.55rem 0.8rem 0.55rem 2.2rem;
+    color: var(--fg);
+    font: inherit;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+  }
+  .view-search__input:focus-visible { border-color: var(--accent); outline: 3px solid var(--focus); outline-offset: 1px; }
+  .view-count { margin: 0; font-size: 0.85rem; white-space: nowrap; }
+  .view-switch { display: flex; gap: 0.3rem; margin-left: auto; }
+  .view-btn {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    cursor: pointer;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+  }
+  .view-btn:hover { color: var(--fg); border-color: var(--accent); }
+  .view-btn.is-active { color: #fff; background: var(--accent-solid); border-color: var(--accent-solid); }
+  .skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+  .skill-grid[data-view="list"] { grid-template-columns: 1fr; }
+  .skill-empty { padding: 2rem 0; text-align: center; }
+</style>
+
+<script>
+  const VIEW_KEY = "skills-view";
+
+  function readView(): "grid" | "list" {
+    try {
+      return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid";
+    } catch (error) {
+      console.warn("Could not read the saved catalog view.", error);
+      return "grid";
+    }
+  }
+
+  function applyView(view: "grid" | "list") {
+    document.querySelectorAll<HTMLElement>(".skill-grid").forEach((grid) => grid.setAttribute("data-view", view));
+    document.querySelectorAll<HTMLElement>(".view-btn").forEach((button) => {
+      const active = button.dataset.viewSet === view;
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.classList.toggle("is-active", active);
+    });
+  }
+
+  function filterSkills(view: HTMLElement, query: string) {
+    const normalized = query.trim().toLowerCase();
+    const cards = view.querySelectorAll<HTMLElement>(".skill-card");
+    let shown = 0;
+    cards.forEach((card) => {
+      const matches = normalized === "" || (card.dataset.search ?? "").includes(normalized);
+      card.hidden = !matches;
+      if (matches) shown += 1;
+    });
+    const count = view.querySelector<HTMLElement>(".view-count");
+    if (count) count.textContent = normalized === "" ? `${cards.length} skills` : `${shown} of ${cards.length}`;
+    const empty = view.querySelector<HTMLElement>(".skill-empty");
+    if (empty) empty.hidden = shown !== 0;
+  }
+
+  function initSkillViews() {
+    applyView(readView());
+    document.querySelectorAll<HTMLElement>(".skill-view").forEach((view) => {
+      if (view.dataset.viewReady) return;
+      view.dataset.viewReady = "true";
+
+      view.querySelector(".view-switch")?.addEventListener("click", (event) => {
+        const button = (event.target as Element | null)?.closest<HTMLElement>("[data-view-set]");
+        if (!button) return;
+        const next = button.dataset.viewSet === "list" ? "list" : "grid";
+        try {
+          localStorage.setItem(VIEW_KEY, next);
+        } catch (error) {
+          console.warn("Could not save the catalog view.", error);
+        }
+        applyView(next);
+      });
+
+      const input = view.querySelector<HTMLInputElement>(".view-search__input");
+      input?.addEventListener("input", () => filterSkills(view, input.value));
+
+      view.addEventListener("click", async (event) => {
+        const button = (event.target as Element | null)?.closest<HTMLButtonElement>(".skill-copy");
+        if (!button) return;
+        const label = button.querySelector<HTMLElement>(".skill-copy__label");
+        try {
+          await navigator.clipboard.writeText(button.dataset.install ?? "");
+          if (label) label.textContent = "Copied";
+          button.classList.add("copied");
+          window.setTimeout(() => {
+            if (label) label.textContent = "Copy install";
+            button.classList.remove("copied");
+          }, 1600);
+        } catch (error) {
+          console.error("Could not copy the install command.", error);
+          if (label) label.textContent = "Copy unavailable";
+        }
+      });
+    });
+  }
+
+  document.addEventListener("astro:page-load", initSkillViews);
+  document.addEventListener("astro:after-swap", () => applyView(readView()));
+</script>

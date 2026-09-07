@@ -1,0 +1,21 @@
+id: positive-trigger-001
+name: Create an editable draw.io diagram
+description: >-
+  Create, validate, and edit accessible draw.io SVG diagrams that remain visually editable.
+  Supports basic flowchart and architecture shapes, semantic styling, orthogonal connectors,
+  strict specification validation, and embedded mxGraph XML. Covers: create a draw.io diagram,
+  create a .drawio.svg, make an editable architecture or flow diagram, validate draw.io XML, use
+  diagrams.net.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Create an editable draw.io architecture diagram and validate its embedded XML."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-drawio-diagrams
+    config:
+      skill_path: skills/drawio-diagrams/SKILL.md
+      mode: positive
+      threshold: 0.6

@@ -1,0 +1,16 @@
+id: positive-trigger-002
+name: Apply extracted branding to Marp
+description: Extract PPTX colors, fonts, logos, images, and safely preview applying the theme.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Extract the colors, fonts, logos, and images from this POTX and apply the theme to my existing Marp deck."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-pptx-to-marp-theme
+    config:
+      skill_path: skills/pptx-to-marp-theme/SKILL.md
+      mode: positive
+      threshold: 0.6

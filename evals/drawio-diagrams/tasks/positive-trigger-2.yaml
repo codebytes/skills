@@ -1,0 +1,16 @@
+id: positive-trigger-002
+name: Validate an editable SVG
+description: Validate a .drawio.svg and fix duplicate IDs, geometry, parents, and connectors.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Validate this .drawio.svg and preserve its editability in diagrams.net."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-drawio-diagrams
+    config:
+      skill_path: skills/drawio-diagrams/SKILL.md
+      mode: positive
+      threshold: 0.6

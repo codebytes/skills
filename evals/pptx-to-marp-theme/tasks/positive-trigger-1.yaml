@@ -1,0 +1,20 @@
+id: positive-trigger-001
+name: Convert a PowerPoint template
+description: >-
+  Extract brand colors, font families, logos, images, and slide dimensions from PowerPoint
+  templates, generate a Marp CSS theme, and safely apply it to existing decks. Covers: convert a
+  PowerPoint template to a Marp theme, extract PPTX or POTX branding, extract colors fonts logos
+  and images, apply a PowerPoint-derived theme to existing Marp slides.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Convert this PowerPoint template to a Marp theme and extract its branding assets."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-pptx-to-marp-theme
+    config:
+      skill_path: skills/pptx-to-marp-theme/SKILL.md
+      mode: positive
+      threshold: 0.6

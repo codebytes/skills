@@ -1,0 +1,96 @@
+{
+  "title": "Agent skill runtime architecture",
+  "description": "A user request activates a skill, which guides tools that read repositories and external services.",
+  "padding": 30,
+  "nodes": [
+    {
+      "id": "user",
+      "label": "User",
+      "x": 30,
+      "y": 220,
+      "width": 120,
+      "height": 70,
+      "shape": "ellipse",
+      "fill": "#f5f5f5",
+      "stroke": "#666666",
+      "fontSize": 15
+    },
+    {
+      "id": "host",
+      "label": "Agent host",
+      "x": 220,
+      "y": 200,
+      "width": 170,
+      "height": 110,
+      "shape": "rounded",
+      "fill": "#dae8fc",
+      "stroke": "#6c8ebf",
+      "fontSize": 15
+    },
+    {
+      "id": "catalog",
+      "label": "Skill catalog",
+      "x": 220,
+      "y": 40,
+      "width": 170,
+      "height": 80,
+      "shape": "rectangle",
+      "fill": "#f5f5f5",
+      "stroke": "#666666"
+    },
+    {
+      "id": "skill",
+      "label": "Activated skill\nSKILL.md + resources",
+      "x": 500,
+      "y": 40,
+      "width": 190,
+      "height": 80,
+      "shape": "rounded",
+      "fill": "#d5e8d4",
+      "stroke": "#82b366"
+    },
+    {
+      "id": "tools",
+      "label": "Tool runtime",
+      "x": 500,
+      "y": 210,
+      "width": 190,
+      "height": 90,
+      "shape": "rounded",
+      "fill": "#fff2cc",
+      "stroke": "#d6b656"
+    },
+    {
+      "id": "repo",
+      "label": "Repository",
+      "x": 800,
+      "y": 200,
+      "width": 160,
+      "height": 100,
+      "shape": "cylinder",
+      "fill": "#e1d5e7",
+      "stroke": "#9673a6"
+    },
+    {
+      "id": "external",
+      "label": "External service",
+      "x": 800,
+      "y": 380,
+      "width": 160,
+      "height": 75,
+      "shape": "rounded",
+      "fill": "#f5f5f5",
+      "stroke": "#666666",
+      "dashed": true
+    }
+  ],
+  "edges": [
+    { "source": "user", "target": "host", "label": "request", "orthogonal": true },
+    { "source": "catalog", "target": "skill", "label": "discover", "orthogonal": true },
+    { "source": "host", "target": "skill", "label": "activate", "orthogonal": true },
+    { "source": "skill", "target": "tools", "label": "guide", "orthogonal": true },
+    { "source": "host", "target": "tools", "label": "invoke", "orthogonal": true },
+    { "source": "tools", "target": "repo", "label": "read / write", "orthogonal": true },
+    { "source": "tools", "target": "external", "label": "API", "orthogonal": true, "dashed": true }
+  ]
+}

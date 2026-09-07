@@ -1,0 +1,20 @@
+{
+  "type": "bar",
+  "title": "Skill adoption by quarter",
+  "description": "Percentage of teams using reusable agent skills",
+  "xLabel": "Quarter",
+  "yLabel": "Teams using skills (%)",
+  "source": "Example data",
+  "series": [
+    {
+      "name": "Adoption",
+      "color": "#0969da",
+      "values": [
+        { "label": "Q1", "value": 18 },
+        { "label": "Q2", "value": 31 },
+        { "label": "Q3", "value": 47 },
+        { "label": "Q4", "value": 64 }
+      ]
+    }
+  ]
+}

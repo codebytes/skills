@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/waza/main/schemas/config.schema.json
+
+paths:
+  skills: skills/
+  evals: evals/
+  results: evals/.results/
+
+defaults:
+  engine: mock
+  model: mock-model
+  timeout: 30
+  parallel: false
+  verbose: false
+  sessionLog: false
+
+cache:
+  enabled: false
+
+tokens:
+  warningThreshold: 500
+  fallbackLimit: 5000

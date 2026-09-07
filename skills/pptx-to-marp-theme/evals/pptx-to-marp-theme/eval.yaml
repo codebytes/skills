@@ -1,0 +1,47 @@
+name: pptx-to-marp-theme
+description: >-
+  Capability eval for the pptx-to-marp-theme skill. The agent must follow the documented workflow,
+  preserve safety boundaries, and verify its result.
+type: capability
+
+defaults:
+  runs: 1
+  timeout: 10m
+  executor: copilot-sdk
+
+scoring:
+  weights:
+    prompt: 0.8
+    skill-invocation: 0.2
+  threshold: 0.8
+
+stimuli:
+  - name: extracts-refines-and-applies-theme
+    prompt: >-
+      Use the pptx-to-marp-theme skill for a user who has a conference POTX template and an
+      existing Marp deck. Explain how you would extract colors, font names, logos, images, and
+      dimensions, review licensing and logo candidates, refine the generated CSS, dry-run the
+      existing deck update, and verify HTML/PDF output. Do not perform repository writes.
+    tags:
+      scenario: workflow
+      cost: low
+    rubric:
+      - Inspects the source template visually and through OOXML extraction.
+      - Distinguishes font names from licensed font files and reviews extracted media.
+      - Treats generated CSS as a starting point requiring visual comparison.
+      - Dry-runs theme application and checks unsupported existing slide classes.
+      - Uses marp-slide-review after applying the theme.
+    graders:
+      - type: prompt
+        name: complete-safe-workflow
+        config:
+          scoring: scale_1_5
+          threshold: 0.75
+          prompt: >-
+            Score 5 only if the response covers safe OOXML extraction, palette and typography
+            mapping, logo and media review, font licensing, dry-run application to existing
+            decks, class compatibility, and rendered HTML/PDF review. Score 1 if it claims a
+            pixel-perfect automatic conversion or overwrites decks without preview.
+      - type: skill-invocation
+        config:
+          required: [pptx-to-marp-theme]

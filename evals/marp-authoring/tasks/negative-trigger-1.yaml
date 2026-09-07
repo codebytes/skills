@@ -1,0 +1,18 @@
+id: negative-trigger-001
+name: Reject visual generation and review
+description: >-
+  DO NOT USE FOR: generating chart or diagram assets; use marp-visuals, or reviewing overflow and
+  rendering; use marp-slide-review.
+tags:
+  - negative-trigger
+inputs:
+  prompt: "Generate a static SVG chart from data and inspect an exported PDF for clipping."
+expected:
+  should_trigger: false
+graders:
+  - type: trigger
+    name: does-not-trigger-marp-authoring
+    config:
+      skill_path: skills/marp-authoring/SKILL.md
+      mode: negative
+      threshold: 0.9

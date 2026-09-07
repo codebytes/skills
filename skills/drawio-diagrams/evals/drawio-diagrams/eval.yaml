@@ -1,0 +1,46 @@
+name: drawio-diagrams
+description: >-
+  Capability eval for the drawio-diagrams skill. The agent must follow the documented workflow,
+  preserve safety boundaries, and verify its result.
+type: capability
+
+defaults:
+  runs: 1
+  timeout: 10m
+  executor: copilot-sdk
+
+scoring:
+  weights:
+    prompt: 0.8
+    skill-invocation: 0.2
+  threshold: 0.8
+
+stimuli:
+  - name: creates-and-validates-editable-architecture
+    prompt: >-
+      Use the drawio-diagrams skill to plan an editable architecture diagram with a user, agent
+      host, activated skill, tool runtime, repository, and external API. Explain the layout,
+      shapes, semantic colors, JSON source, validation, and visual inspection. Do not perform
+      repository writes.
+    tags:
+      scenario: workflow
+      cost: low
+    rubric:
+      - Chooses a tiered or left-to-right layout before assigning coordinates.
+      - Uses consistent basic shapes and semantic colors.
+      - Preserves JSON source beside an accessible editable SVG.
+      - Runs extraction and structural validation before claiming completion.
+    graders:
+      - type: prompt
+        name: complete-safe-workflow
+        config:
+          scoring: scale_1_5
+          threshold: 0.75
+          prompt: >-
+            Score 5 only if the response plans the graph before writing, uses appropriate shapes
+            and orthogonal connectors, preserves editable source, validates IDs, parents,
+            geometry, and edge references, and includes visual inspection. Score 1 if it emits
+            unvalidated XML or a flattened non-editable image.
+      - type: skill-invocation
+        config:
+          required: [drawio-diagrams]

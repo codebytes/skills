@@ -1,0 +1,19 @@
+id: positive-trigger-001
+name: Review rendered Marp slides
+description: >-
+  Review rendered Marp slide decks for overflow, clipping, visual balance, asset failures, and
+  HTML/PDF rendering differences. Covers: review Marp slides, check slide overflow, inspect
+  rendered slides, lint a deck layout, verify slides fit, compare PDF rendering.
+tags:
+  - positive-trigger
+inputs:
+  prompt: "Review these Marp slides for overflow, visual balance, broken assets, and PDF differences."
+expected:
+  should_trigger: true
+graders:
+  - type: trigger
+    name: triggers-marp-slide-review
+    config:
+      skill_path: skills/marp-slide-review/SKILL.md
+      mode: positive
+      threshold: 0.6

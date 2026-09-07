@@ -1,0 +1,41 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title={`About | Codebytes Skills Catalog`} description="About Codebytes Skills Catalog and its reusable agent skills.">
+  <header class="page-head">
+    <h1>About</h1>
+    <p class="muted">A reusable catalog maintained by Chris Ayers.</p>
+  </header>
+
+  <section class="card">
+    <h2>What this is</h2>
+    <p>Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.</p>
+    <p>
+      Each skill lives in its own repository folder and has a Markdown catalog
+      entry with structured metadata, install commands, and detailed guidance.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Repository details</h2>
+    <dl>
+      <div><dt>Author</dt><dd>Chris Ayers</dd></div>
+      <div><dt>Owner</dt><dd><a href="https://github.com/codebytes">codebytes</a></dd></div>
+      <div><dt>Repository</dt><dd><a href="https://github.com/codebytes/skills">skills</a></dd></div>
+      <div><dt>Package</dt><dd><code>codebytes-skills</code></dd></div>
+      <div><dt>Marketplace</dt><dd><code>codebytes-skills</code></dd></div>
+    </dl>
+  </section>
+</Layout>
+
+<style>
+  .page-head { margin-bottom: 1.5rem; text-align: center; }
+  .page-head h1 { margin: 0; font-size: clamp(1.75rem, 5vw, 2.5rem); }
+  .page-head p { margin: 0.4rem 0 0; }
+  dl { margin: 0; }
+  dl div { display: grid; grid-template-columns: minmax(7rem, 0.3fr) 1fr; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
+  dl div:last-child { border-bottom: 0; }
+  dt { font-weight: 700; }
+  dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+</style>

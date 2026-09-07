@@ -1,0 +1,78 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { getCollection, render, type CollectionEntry } from "astro:content";
+
+export async function getStaticPaths() {
+  const skills = await getCollection("skills");
+  return skills.map((skill) => ({ params: { slug: skill.id }, props: { skill } }));
+}
+
+interface Props {
+  skill: CollectionEntry<"skills">;
+}
+
+const { skill } = Astro.props;
+const { Content } = await render(skill);
+const base = import.meta.env.BASE_URL;
+const repoUrl = `https://github.com/codebytes/skills/tree/main/${skill.data.repoPath}`;
+---
+
+<Layout title={`${skill.data.title} | Codebytes Skills Catalog`} description={skill.data.tagline}>
+  <p class="back"><a href={`${base}catalog/`}><span aria-hidden="true">&larr;</span> All skills</a></p>
+
+  <header class="skill-head">
+    <img class="skill-hero" src={`${base}${skill.data.thumb}`} alt="" width="640" height="360" />
+    <h1>{skill.data.title}</h1>
+    <p class="muted lede">{skill.data.tagline}</p>
+    <p class="use-when"><strong>Use when:</strong> {skill.data.useWhen}</p>
+    <p class="actions">
+      <a class="btn" href={repoUrl}>Source and README</a>
+      {skill.data.gallery && <a class="btn btn-ghost" href={skill.data.gallery}>Open gallery</a>}
+    </p>
+  </header>
+
+  <section class="card">
+    <h2>Install</h2>
+    <p class="muted command-label">Ask your agent</p>
+    <pre><code>{`install ${skill.id} from codebytes/skills`}</code></pre>
+    {skill.data.install.map((step) => (
+      <>
+        <p class="muted command-label">{step.label}</p>
+        <pre><code>{step.cmd}</code></pre>
+      </>
+    ))}
+    <p class="muted">Then reload skills in your agent or start a new session.</p>
+  </section>
+
+  <article class="prose">
+    <Content />
+  </article>
+</Layout>
+
+<style>
+  .back { margin: 0 0 1rem; }
+  .back a { font-weight: 600; text-decoration: none; }
+  .skill-head { margin-bottom: 1.5rem; }
+  .skill-hero {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    padding: 1rem;
+    margin-bottom: 1.1rem;
+    object-fit: contain;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .skill-head h1 { margin: 0 0 0.5rem; font: 700 clamp(1.6rem, 5vw, 2.3rem)/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .lede { font-size: 1.05rem; }
+  .use-when { padding: 0.7rem 0.9rem; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .btn-ghost { color: var(--fg); background: var(--panel); border-color: var(--border); }
+  .command-label { margin: 0.8rem 0 0.3rem; }
+  .card pre, .prose pre { padding: 0.7rem 0.9rem; overflow-x: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 9px; }
+  .prose :global(h2) { margin: 1.8rem 0 0.6rem; font-size: 1.25rem; }
+  .prose :global(h3) { margin: 1.3rem 0 0.5rem; font-size: 1.05rem; }
+  .prose :global(li) { margin: 0.25rem 0; }
+</style>
