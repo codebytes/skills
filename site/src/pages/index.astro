@@ -16,7 +16,7 @@ const skills = (await getCollection("skills")).sort((a, b) => a.data.order - b.d
       <a class="btn" href={`${base}catalog/`}>Browse skills</a>
       <a class="btn btn-ghost" href="https://github.com/codebytes/skills">View on GitHub</a>
     </div>
-    <pre class="hero-cmd"><code>npx skills add codebytes/skills --all</code></pre>
+    <pre class="hero-cmd"><code>npx skills add codebytes/skills --skill '*'</code></pre>
   </header>
 
   <section aria-labelledby="featured-skills">
@@ -33,11 +33,15 @@ const skills = (await getCollection("skills")).sort((a, b) => a.data.order - b.d
     <pre><code>install codebytes/skills</code></pre>
     <h3>Skills CLI</h3>
     <pre><code>npx skills add codebytes/skills --list
-npx skills add codebytes/skills --all</code></pre>
+npx skills add codebytes/skills --skill '*'</code></pre>
     <h3>Plugin marketplace</h3>
     <pre><code>copilot plugin marketplace add codebytes/skills
-    copilot plugin install marp-authoring@codebytes-skills</code></pre>
+copilot plugin install marp-authoring@codebytes-skills</code></pre>
     <p class="muted">After installation, reload skills in your agent or start a new session.</p>
+    <p>
+      See the <a href="https://github.com/codebytes/skills#install">client installation guide</a>
+      and <a href="https://github.com/codebytes/skills#updating-installed-skills-and-plugins">update instructions</a>.
+    </p>
   </section>
 </Layout>
 

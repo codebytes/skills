@@ -1,19 +1,3 @@
-# Codebytes Skills
-
-Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts\.
-
-## Skills
-
-| Skill | What it does |
-|---|---|
-| [`create-skill`](skills/create-skill/) | \*\*WORKFLOW SKILL\*\* - Create and register a complete portable agent skill in a managed skills-repo\.config\.json repository or an existing skills repository\. Produces focused instructions, documentation, deterministic tests, Vally evals, locked tooling, registration, and optional validated thumbnail art\. USE FOR: create-skill, create a skill, add an agent skill, scaffold a portable skill, register a skill, add skill to managed repo, create skill in existing repo, generate an example skill from a fixture, add skill thumbnail art\. DO NOT USE FOR: scaffolding a new marketplace collection from scratch \(use create-skills-repo\), editing one existing skill instruction without registration work \(use skill-authoring\), creating an agent persona\. |
-| [`csv-analysis`](skills/csv-analysis/) | \*\*WORKFLOW SKILL\*\* - Analyze CSV files and generate statistical data quality reports\. USE FOR: analyze CSV files, profile tabular data, inspect CSV quality, generate CSV reports\. DO NOT USE FOR: editing spreadsheets or producing XLSX workbooks; use spreadsheet tooling instead\. |
-| [`drawio-diagrams`](skills/drawio-diagrams/) | \*\*WORKFLOW SKILL\*\* - Create, validate, and edit accessible draw\.io SVG diagrams that remain visually editable\. Supports basic flowchart and architecture shapes, semantic styling, orthogonal connectors, strict specification validation, and embedded mxGraph XML\. USE FOR: create a draw\.io diagram, create a \.drawio\.svg, make an editable architecture or flow diagram, validate draw\.io XML, use diagrams\.net\. DO NOT USE FOR: quick throwaway diagrams that do not need draw\.io editability; use Mermaid instead, or complex cloud/UML diagrams that require full draw\.io shape libraries; use draw\.io Desktop or jgraph/drawio-mcp\. |
-| [`marp-authoring`](skills/marp-authoring/) | \*\*WORKFLOW SKILL\*\* - Create and revise Marp decks with reliable slide structure, content transformations, speaker notes, layouts, and existing theme styles\. USE FOR: create Marp slides, add a slide, rewrite slide content, split or merge slides, reorder a deck, add speaker notes, apply slide layouts, restyle slides\. DO NOT USE FOR: generating chart or diagram assets; use marp-visuals, or reviewing overflow and rendering; use marp-slide-review\. |
-| [`marp-slide-review`](skills/marp-slide-review/) | \*\*WORKFLOW SKILL\*\* - Review rendered Marp slide decks for overflow, clipping, visual balance, asset failures, and HTML/PDF rendering differences\. USE FOR: review Marp slides, check slide overflow, inspect rendered slides, lint a deck layout, verify slides fit, compare PDF rendering\. DO NOT USE FOR: authoring slide content; use marp-authoring, or generating chart and diagram assets; use marp-visuals\. |
-| [`marp-visuals`](skills/marp-visuals/) | \*\*WORKFLOW SKILL\*\* - Create deterministic charts, Mermaid diagrams, graphs, and accessible static visual assets for Marp decks\. USE FOR: add a chart to slides, build a graph, create a Mermaid diagram, turn data into a slide visual, generate SVG assets for Marp\. DO NOT USE FOR: editing slide narrative or layout; use marp-authoring, or creating diagrams that must remain editable in draw\.io; use drawio-diagrams\. |
-| [`pptx-to-marp-theme`](skills/pptx-to-marp-theme/) | \*\*WORKFLOW SKILL\*\* - Extract brand colors, font families, logos, images, and slide dimensions from PowerPoint templates, generate a Marp CSS theme, and safely apply it to existing decks\. USE FOR: convert a PowerPoint template to a Marp theme, extract PPTX or POTX branding, extract colors fonts logos and images, apply a PowerPoint-derived theme to existing Marp slides\. DO NOT USE FOR: editing PowerPoint slide content; use PPTX tooling, or rewriting Marp slide narrative; use marp-authoring\. |
-
 ## Install
 
 Install the collection with **one method per client** to avoid duplicate skills.
@@ -26,8 +10,8 @@ The community [Skills CLI](https://skills.sh/docs/cli) can list the collection o
 install selected skills into an agent's supported skill directory:
 
 ```sh
-npx skills add https://github.com/codebytes/skills --list
-npx skills add https://github.com/codebytes/skills --skill csv-analysis
+npx skills add {{repositoryUrl}} --list
+npx skills add {{repositoryUrl}} --skill csv-analysis
 ```
 
 Use `--skill '*'` for the complete collection while retaining the agent-selection
@@ -38,19 +22,19 @@ files with its `SKILL.md`; do not copy only the Markdown file.
 ### GitHub Copilot CLI
 
 ```sh
-copilot plugin marketplace add codebytes/skills
-copilot plugin install codebytes-skills@codebytes-skills
+copilot plugin marketplace add {{repository}}
+copilot plugin install {{packageName}}@{{packageName}}
 ```
 
-For an individual skill, install `csv-analysis@codebytes-skills` instead.
+For an individual skill, install `csv-analysis@{{packageName}}` instead.
 Individual marketplace entries use Copilot/VS Code's skill-only compatibility
 format; the complete collection is the portable Agent Plugins 1.0 package.
 
 ### Claude Code CLI
 
 ```sh
-claude plugin marketplace add codebytes/skills
-claude plugin install codebytes-skills@codebytes-skills
+claude plugin marketplace add {{repository}}
+claude plugin install {{packageName}}@{{packageName}}
 ```
 
 The equivalent interactive commands start with `/plugin`. Claude uses
@@ -62,9 +46,9 @@ Use **Codex CLI 0.142.0 or newer** for this repository-root marketplace.
 
 ```sh
 codex --version
-codex plugin marketplace add codebytes/skills
+codex plugin marketplace add {{repository}}
 codex plugin list --available --json
-codex plugin add codebytes-skills@codebytes-skills
+codex plugin add {{packageName}}@{{packageName}}
 ```
 
 Confirm the collection appears in the available list, then start a new session
@@ -81,7 +65,7 @@ published `main`.
 ### Gemini CLI
 
 ```sh
-gemini extensions install https://github.com/codebytes/skills
+gemini extensions install {{repositoryUrl}}
 gemini skills list --all
 ```
 
@@ -90,7 +74,7 @@ MCP server, or `GEMINI.md` is required in this skills-only extension.
 
 ### VS Code
 
-Use the Extensions view's `@agentPlugins` filter. Add `codebytes/skills` to the
+Use the Extensions view's `@agentPlugins` filter. Add `{{repository}}` to the
 **user-level** `chat.plugins.marketplaces` setting, preserving existing entries,
 then install the collection. This is an agent-plugin marketplace, not a VSIX
 extension in Visual Studio Marketplace.
@@ -105,7 +89,7 @@ or deprecated `chat.agentSkillsLocations` settings in a new setup.
 
 With JetBrains AI Assistant enabled, open **Settings | Tools | AI Assistant |
 Skills**. Use **Skills Settings | Manage Skill Directories** to add this checkout's
-`skills/` directory, or **Manage External Registries** to add `https://github.com/codebytes/skills`.
+`skills/` directory, or **Manage External Registries** to add `{{repositoryUrl}}`.
 Select a skill, choose the intended IDE/project/agent scope, install it, and use
 **Try in chat** to confirm availability.
 
@@ -138,11 +122,11 @@ Review changes before applying updates, then start a new agent session.
 | Installation | Update procedure |
 | --- | --- |
 | Skills CLI | Run `npx skills update` and select the intended scope, or `npx skills update csv-analysis` to target one installer-managed skill. |
-| Copilot CLI marketplace | Run `copilot plugin marketplace update codebytes-skills`, then `copilot plugin update codebytes-skills@codebytes-skills`. Substitute the individual skill name if installed separately. |
-| Copilot CLI direct Git URL | Run `copilot plugin update codebytes-skills`; no marketplace suffix is needed for a direct install. |
-| Claude Code | Run `claude plugin marketplace update codebytes-skills`, then `claude plugin update codebytes-skills@codebytes-skills`. |
-| Codex CLI | Run `codex plugin marketplace upgrade codebytes-skills` to refresh the catalog. On clients with `plugin add/remove` but no `plugin update`, remove and re-add the qualified plugin as shown below. |
-| Gemini extension | Run `gemini extensions update codebytes-skills`, then restart Gemini. `/skills reload` refreshes skill discovery; it does not download extension updates. |
+| Copilot CLI marketplace | Run `copilot plugin marketplace update {{packageName}}`, then `copilot plugin update {{packageName}}@{{packageName}}`. Substitute the individual skill name if installed separately. |
+| Copilot CLI direct Git URL | Run `copilot plugin update {{packageName}}`; no marketplace suffix is needed for a direct install. |
+| Claude Code | Run `claude plugin marketplace update {{packageName}}`, then `claude plugin update {{packageName}}@{{packageName}}`. |
+| Codex CLI | Run `codex plugin marketplace upgrade {{packageName}}` to refresh the catalog. On clients with `plugin add/remove` but no `plugin update`, remove and re-add the qualified plugin as shown below. |
+| Gemini extension | Run `gemini extensions update {{packageName}}`, then restart Gemini. `/skills reload` refreshes skill discovery; it does not download extension updates. |
 | VS Code | Update from the original source. Use Copilot CLI for a CLI-managed install; use the Agent Plugins UI's available update actions for a VS Code-managed install. |
 | Rider | Refresh the configured source in Skills settings and replace/update the installed copy at its original scope. A local source directory and an IDE-installed copy are different things. Verify with **Try in chat**. |
 | ChatGPT | Use the Plugins UI and the workspace's marketplace-sync process where available; local CLI updates do not guarantee a workspace-managed plugin update. |
@@ -150,9 +134,9 @@ Review changes before applying updates, then start a new agent session.
 For Codex CLI versions with `plugin add/remove` but no `plugin update`:
 
 ```sh
-codex plugin marketplace upgrade codebytes-skills
-codex plugin remove codebytes-skills@codebytes-skills
-codex plugin add codebytes-skills@codebytes-skills
+codex plugin marketplace upgrade {{packageName}}
+codex plugin remove {{packageName}}@{{packageName}}
+codex plugin add {{packageName}}@{{packageName}}
 ```
 
 For a linked/local development installation, update the source checkout first
@@ -206,30 +190,3 @@ skills or changing repository identity. Run this local sync after that lifecycle
 too, so the documentation and compatibility views remain current. The native
 Codex marketplace intentionally retains its local-root source and requires a
 client with the upstream root-local fix.
-
-## Validation
-
-```sh
-npm ci --prefix .github/tools/vally --ignore-scripts
-npm test --prefix .github/tools/vally
-```
-
-## Catalog
-
-The catalog lives in `site/`. Preview it locally before publishing:
-
-```sh
-npm ci --prefix site --ignore-scripts
-npm run dev --prefix site
-```
-
-Publishing requires separate owner approval. The generated Pages workflow never runs on pull requests.
-
-## Adding a skill
-
-Use the bundled `create-skill` skill. Individual skill authoring does not
-belong to the repository lifecycle tool.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
