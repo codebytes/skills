@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "11.16.0",
-    "@microsoft/vally-cli": "0.14.0"
+    "@microsoft/vally-cli": "0.16.0"
   },
   "allowScripts": {
     "@vscode/deviceid": false,
