@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@marp-team/marp-cli": "4.5.0",
-    "@microsoft/vally-cli": "0.14.0",
+    "@microsoft/vally-cli": "0.16.0",
     "playwright": "1.63.0"
   },
   "allowScripts": {
