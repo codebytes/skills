@@ -7,6 +7,20 @@ embedding it in a deck:
 node scripts/render-mermaid.mjs architecture.mmd -o architecture.svg
 ```
 
+Include `accTitle` and `accDescr` in the source so the rendered SVG contains a
+title and description:
+
+```mermaid
+flowchart LR
+  accTitle: Reviewed release flow
+  accDescr: A reviewed change moves from a passing build to a release.
+  A[Passing build] --> B[Release]
+```
+
+The wrapper rejects missing accessibility metadata and preserves an existing
+output if rendering fails. Set `CHROME_PATH` or `PUPPETEER_EXECUTABLE_PATH` when
+using an installed browser with the locked, script-disabled npm installation.
+
 Recommended diagram types:
 
 - `flowchart` for processes and decisions

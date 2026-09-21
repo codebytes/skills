@@ -13,13 +13,14 @@ description: >-
 ---
 
 > [!CAUTION]
-> Read and follow the shared safety rules before any action. Preview local writes and obtain
+> Follow this skill's Safety Invariants before any action. Preview local writes and obtain
 > explicit approval. Git and GitHub writes require their own approval and are outside this skill.
 
 # Create Skill
 
 Create one complete skill and register every repository surface without guessing. The workflow
 plans first, fails closed on ambiguous conventions, and applies one approved change set.
+The bundled CLI requires Node.js 22.20 or newer.
 
 ## Commands
 
@@ -32,7 +33,7 @@ plans first, fails closed on ambiguous conventions, and applies one approved cha
 | `create-skill fixture --input <json> --repo-root <path>` | Deterministically create a validated fixture skill without interview prompts. |
 
 Every mutating command starts with `--dry-run`. Apply the unchanged plan only after the user
-approves its single-use hash.
+approves its plan hash. Art actions additionally use a persisted single-use token.
 
 ## Workflow
 
@@ -89,6 +90,9 @@ Creation includes:
 - `SKILL.md` with only `name` and `description` frontmatter keys.
 - `README.md`, `LICENSE`, `package.json`, and `package-lock.json`.
 - `.vally.yaml`, deterministic tests, and `evals/<name>/eval.yaml`.
+- Separate root `evals/<name>/` mock trigger tasks when `.waza.yaml` uses the
+  repository's canonical skill root and root `evals/` directory. Existing authored
+  tasks are preserved; unsupported Waza layouts stop registration.
 - `thumbnail.png` and a byte-identical catalog copy when the repository has a catalog.
 - Marketplace, plugin, README, eval workflow, Dependabot, and catalog registration when present.
 - Prompt and non-secret provenance in `docs/thumbnail-prompts.md` when present.
@@ -170,9 +174,16 @@ Run:
 
 ```text
 node <skill-dir>/scripts/create-skill.mjs check <name>
-npm test
-npm run eval:lint
+npm ci --prefix skills/<name> --ignore-scripts
+npm test --prefix skills/<name>
+npm run eval:lint --prefix skills/<name>
 ```
+
+Use the discovered skill root instead of `skills/` when working in a
+convention-based repository. In a managed repository, run `create-skills-repo
+sync` after adding or removing a skill, then apply any repository-local
+compatibility sync. Keep root Waza trigger suites separate from the skill-local
+Vally capability specs when the target repository uses both.
 
 Run `devx skills doctor`, strict skill checking, routing, and overlap checks when those tools are
 available in the target repository. Do not run the full capability eval unless the user accepts

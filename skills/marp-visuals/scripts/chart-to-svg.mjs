@@ -2,7 +2,6 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const HELP = `Generate an accessible SVG chart from JSON.
 
@@ -23,9 +22,10 @@ function escapeXml(value) {
 }
 
 function number(value, label) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new Error(`${label} must be a finite number.`);
-  return parsed;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`${label} must be a finite JSON number.`);
+  }
+  return value;
 }
 
 function color(value, fallback, label) {
@@ -126,7 +126,11 @@ function niceStep(range, targetIntervals = 5) {
   const magnitude = 10 ** Math.floor(Math.log10(rough));
   const fraction = rough / magnitude;
   const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10;
-  return niceFraction * magnitude;
+  const step = niceFraction * magnitude;
+  if (!Number.isFinite(step) || step <= 0) {
+    throw new Error("Chart values exceed the supported numeric range.");
+  }
+  return step;
 }
 
 function renderLegend(spec, startX, y) {
@@ -147,11 +151,14 @@ export function renderChart(input) {
     height: spec.height - margin.top - margin.bottom,
   };
   const allValues = spec.series.flatMap((series) => series.values.map(({ value }) => value));
-  const dataMin = Math.min(0, ...allValues);
-  const dataMax = Math.max(0, ...allValues);
+  const dataMin = allValues.reduce((minimum, value) => Math.min(minimum, value), 0);
+  const dataMax = allValues.reduce((maximum, value) => Math.max(maximum, value), 0);
   const step = niceStep(dataMax === dataMin ? 1 : dataMax - dataMin);
   const min = Math.floor(dataMin / step) * step;
   const max = Math.ceil((dataMax === dataMin ? dataMax + step : dataMax) / step) * step;
+  if (!Number.isFinite(max - min) || max <= min) {
+    throw new Error("Chart values exceed the supported numeric range.");
+  }
   const y = (value) => plot.y + ((max - value) / (max - min)) * plot.height;
   const baseline = y(0);
   const parts = [];
@@ -160,7 +167,9 @@ export function renderChart(input) {
   parts.push(`<text x="${margin.left}" y="48" font-size="34" font-weight="700">${escapeXml(spec.title)}</text>`);
   parts.push(renderLegend(spec, margin.left, 82));
 
-  for (let value = min; value <= max + step / 1000; value += step) {
+  const tickCount = Math.round((max - min) / step);
+  for (let index = 0; index <= tickCount; index += 1) {
+    const value = min + index * step;
     const tickY = y(value);
     parts.push(`<line x1="${plot.x}" y1="${tickY}" x2="${plot.x + plot.width}" y2="${tickY}" stroke="${spec.grid}" stroke-width="1"/>`);
     parts.push(`<text x="${plot.x - 14}" y="${tickY + 6}" text-anchor="end" font-size="17">${escapeXml(formatValue(value))}</text>`);
@@ -192,7 +201,7 @@ export function renderChart(input) {
         const valueY = y(value);
         const x = plot.x + categoryWidth * pointIndex + (categoryWidth - groupWidth) / 2 + barWidth * seriesIndex;
         const rectY = Math.min(valueY, baseline);
-        const height = Math.max(1, Math.abs(baseline - valueY));
+        const height = Math.abs(baseline - valueY);
         parts.push(`<rect x="${x}" y="${rectY}" width="${Math.max(1, barWidth - 4)}" height="${height}" rx="3" fill="${series.color}"/>`);
         if (spec.showValues) {
           const labelY = value >= 0 ? rectY - 8 : rectY + height + 20;
@@ -235,10 +244,14 @@ export function renderChart(input) {
     `</g></svg>\n`;
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const result = { input: null, output: null, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
+    if ((value === "-o" || value === "--output") &&
+        (argv[index + 1] === undefined || argv[index + 1].startsWith("-"))) {
+      throw new Error(`${value} requires a value`);
+    }
     if (value === "-h" || value === "--help") result.help = true;
     else if (value === "-o" || value === "--output") result.output = argv[++index];
     else if (value.startsWith("-")) throw new Error(`Unknown option: ${value}`);
@@ -268,8 +281,7 @@ function main(argv) {
   return 0;
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-if (isMain) {
+if (import.meta.main) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

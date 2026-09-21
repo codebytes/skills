@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -28,6 +28,10 @@ export function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
+    if (["-o", "--output", "--theme", "--background", "--width", "--height", "--scale"].includes(value) &&
+        (argv[index + 1] === undefined || argv[index + 1].startsWith("--") || argv[index + 1] === "")) {
+      throw new Error(`${value} requires a value`);
+    }
     if (value === "-h" || value === "--help") result.help = true;
     else if (value === "-o" || value === "--output") result.output = argv[++index];
     else if (value === "--theme") result.theme = argv[++index];
@@ -53,7 +57,7 @@ export function parseArgs(argv) {
 function commandForCli() {
   const explicit = process.env.MERMAID_CLI_PATH;
   if (explicit) {
-    return explicit.endsWith(".js")
+    return /\.(?:mjs|cjs|js)$/.test(explicit)
       ? { command: process.execPath, prefix: [resolve(explicit)] }
       : { command: explicit, prefix: [] };
   }
@@ -81,10 +85,17 @@ export function renderMermaid(options) {
 
   const source = readFileSync(input, "utf8").trim();
   if (!source) throw new Error("Mermaid source is empty.");
+  if (!/^\s*accTitle\s*:\s*\S/m.test(source) ||
+      !/^\s*accDescr\s*(?::\s*\S|\{)/m.test(source)) {
+    throw new Error("Mermaid source requires accTitle and accDescr for an accessible SVG.");
+  }
 
+  mkdirSync(dirname(output), { recursive: true });
+  const work = mkdtempSync(resolve(dirname(output), ".mermaid-render-"));
+  const rendered = resolve(work, "diagram.svg");
   const args = [
     "-i", input,
-    "-o", output,
+    "-o", rendered,
     "-t", options.theme,
     "-b", options.background,
     "-s", String(options.scale),
@@ -94,19 +105,26 @@ export function renderMermaid(options) {
 
   const cli = commandForCli();
   const browser = process.env.PUPPETEER_EXECUTABLE_PATH ?? process.env.CHROME_PATH;
-  const result = spawnSync(cli.command, [...cli.prefix, ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      ...(browser ? { PUPPETEER_EXECUTABLE_PATH: browser } : {}),
-    },
-  });
-  if (result.error) throw new Error(result.error.message);
-  if (result.status !== 0) {
-    throw new Error((result.stderr || result.stdout || "Mermaid CLI failed").trim());
-  }
-  if (!existsSync(output) || !/<svg\b/i.test(readFileSync(output, "utf8"))) {
-    throw new Error(`Mermaid CLI did not create a valid SVG: ${output}`);
+  try {
+    const result = spawnSync(cli.command, [...cli.prefix, ...args], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        ...(browser ? { PUPPETEER_EXECUTABLE_PATH: browser } : {}),
+      },
+    });
+    if (result.error) throw new Error(result.error.message);
+    if (result.status !== 0) {
+      throw new Error((result.stderr || result.stdout || "Mermaid CLI failed").trim());
+    }
+    const svg = existsSync(rendered) ? readFileSync(rendered, "utf8") : "";
+    if (!/<svg\b/i.test(svg) || !/<title\b[^>]*>[^<]+<\/title>/i.test(svg) ||
+        !/<desc\b[^>]*>[^<]+<\/desc>/i.test(svg)) {
+      throw new Error("Mermaid CLI did not create an SVG with an accessible title and description.");
+    }
+    renameSync(rendered, output);
+  } finally {
+    rmSync(work, { recursive: true, force: true });
   }
   return output;
 }
@@ -126,8 +144,7 @@ function main(argv) {
   return 0;
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-if (isMain) {
+if (import.meta.main) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

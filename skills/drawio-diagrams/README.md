@@ -23,7 +23,8 @@ node scripts/make-drawio-svg.mjs extract example.drawio.svg
 node scripts/validate-drawio.mjs example.drawio.svg
 ```
 
-Node.js 18 or newer is required for the helper.
+Run helper commands from the installed skill directory, or use absolute script
+and asset paths. Node.js 22.20 or newer is required.
 
 Two richer examples are available in `assets/examples/`:
 
@@ -34,6 +35,8 @@ The guidance and validation rules are adapted from the MIT-licensed
 `github/awesome-copilot` draw.io diagram generator.
 
 ## Development
+
+Run from this skill's directory:
 
 ```sh
 npm ci --ignore-scripts

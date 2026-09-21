@@ -69,3 +69,8 @@ jobs:
             --output-dir "$RUNNER_TEMP/waza-results" \
             --no-cache \
             --no-summary
+
+      - name: Check skill documentation token budgets
+        env:
+          WAZA_NO_UPDATE_CHECK: "1"
+        run: waza tokens check --strict

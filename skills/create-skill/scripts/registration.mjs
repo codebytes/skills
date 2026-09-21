@@ -12,9 +12,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { assertValidPng } from "./png.mjs";
-import { renderSkillFiles, validateSkillName } from "./render.mjs";
+import { renderSkillFiles, renderWazaFiles, validateSkillName } from "./render.mjs";
 
 function toBuffer(value) {
   return Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
@@ -194,6 +194,7 @@ export function hashPlan(mutations) {
 function makePlan(root, values) {
   const mutations = [...values.entries()]
     .map(([path, value]) => {
+      ensureSafeDestination(root, path);
       const bytes = toBuffer(value);
       const current = existsSync(path) ? readFileSync(path) : null;
       return current?.equals(bytes)
@@ -260,6 +261,18 @@ export function buildRegistrationUpdates(profile, manifest, art) {
   const provenance = safeProvenance(art.provenance);
   const values = new Map();
   const skillsRelative = relative(profile.root, profile.paths.skills).split(sep).join("/");
+  const waza = join(profile.root, ".waza.yaml");
+  if (existsSync(waza)) {
+    const paths = readText(waza).match(/^paths:\s*\r?\n((?:[ \t]+.*(?:\r?\n|$))*)/m)?.[1] ?? "";
+    const configured = (key) => paths.match(new RegExp(`^  ${key}:\\s*["']?([^\\s"']+)["']?\\s*$`, "m"))?.[1]?.replace(/\/$/, "");
+    if (configured("skills") !== skillsRelative || configured("evals") !== "evals") {
+      throw new Error("Waza registration requires paths.skills to match the skill root and paths.evals to be evals/");
+    }
+    for (const [file, content] of renderWazaFiles(manifest, `${skillsRelative}/${manifest.name}/SKILL.md`)) {
+      const target = join(profile.root, "evals", manifest.name, file);
+      if (!existsSync(target)) values.set(target, content);
+    }
+  }
   if (profile.paths.readme) {
     values.set(
       profile.paths.readme,
@@ -333,6 +346,7 @@ export function buildCreatePlan(profile, manifest, options = {}) {
   for (const [path, content] of buildRegistrationUpdates(profile, manifest, options.art)) {
     values.set(path, content);
   }
+  addManagedStateUpdate(profile, values);
   return makePlan(profile.root, values);
 }
 
@@ -379,18 +393,18 @@ export function buildArtPlan(profile, manifest, art) {
 function ensureSafeDestination(root, path) {
   const absolute = resolve(path);
   const rel = relative(root, absolute);
-  if (rel === ".." || rel.startsWith(`..${sep}`) || rel === "") {
+  if (isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`) || rel === "") {
     throw new Error(`Unsafe plan destination ${path}`);
   }
 
   let current = dirname(absolute);
   while (current !== root && current.startsWith(root)) {
-    if (existsSync(current) && lstatSync(current).isSymbolicLink()) {
+    if (lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) {
       throw new Error(`Plan destination has a symbolic link ancestor: ${path}`);
     }
     current = dirname(current);
   }
-  if (existsSync(absolute) && lstatSync(absolute).isSymbolicLink()) {
+  if (lstatSync(absolute, { throwIfNoEntry: false })?.isSymbolicLink()) {
     throw new Error(`Plan destination is a symbolic link: ${path}`);
   }
 }

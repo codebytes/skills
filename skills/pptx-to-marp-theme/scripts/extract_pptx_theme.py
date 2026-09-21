@@ -16,6 +16,7 @@ import sys
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlsplit
 from xml.etree import ElementTree as ET
 
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -74,10 +75,12 @@ def validate_theme_name(value: str) -> str:
 
 
 def validate_css_import(value: str) -> str:
-    if not value or len(value) > 500 or re.search(r"['\"\r\n;{}]", value):
+    if not value or len(value) > 500 or re.search(r"['\"\\\x00-\x1f\x7f;{}]", value):
         raise ValueError(f"Unsafe CSS import: {value!r}")
-    if "://" in value and not value.startswith("https://"):
-        raise ValueError("Remote CSS imports must use HTTPS.")
+    url = urlsplit(value)
+    if url.scheme or url.netloc:
+        if url.scheme != "https" or not url.hostname or url.username or url.password:
+            raise ValueError("Remote CSS imports must use HTTPS without credentials.")
     return value
 
 
@@ -156,7 +159,9 @@ def color_from_node(node: ET.Element) -> str | None:
             channels = [max(0, min(100000, int(node.get(key, "0")))) for key in ("r", "g", "b")]
         except ValueError:
             return None
-        return "".join(f"{round(channel * 255 / 100000):02X}" for channel in channels)
+        linear = [channel / 100000 for channel in channels]
+        srgb = [12.92 * channel if channel <= 0.0031308 else 1.055 * channel ** (1 / 2.4) - 0.055 for channel in linear]
+        return "".join(f"{round(channel * 255):02X}" for channel in srgb)
     if kind == "prstClr":
         return PRESET_COLORS.get(node.get("val", "").lower())
     return None
@@ -266,7 +271,9 @@ def presentation_size(archive: zipfile.ZipFile) -> dict:
         return {"cx": None, "cy": None, "widthInches": None, "heightInches": None, "ratio": 16 / 9}
     cx = int(size.get("cx", "0"))
     cy = int(size.get("cy", "0"))
-    ratio = cx / cy if cy else 16 / 9
+    if cx <= 0 or cy <= 0:
+        raise ValueError("PowerPoint slide dimensions must be positive.")
+    ratio = cx / cy
     return {
         "cx": cx,
         "cy": cy,
@@ -856,11 +863,43 @@ template, refine the CSS, then apply the theme to existing decks with
 """
 
 
-def prepare_output(output_dir: Path, theme_name: str, force: bool) -> tuple[Path, Path, Path]:
+def managed_output_path(output_dir: Path, theme_name: str, relative: str) -> Path:
+    if not isinstance(relative, str) or "\\" in relative:
+        raise ValueError(f"Unsafe generated path in marker: {relative}")
+    parts = PurePosixPath(relative).parts
+    fixed = {
+        f"{theme_name}.css",
+        f"{theme_name}/.pptx-to-marp-theme.json",
+        f"{theme_name}/README.md",
+        f"{theme_name}/sample.md",
+        f"{theme_name}/theme-report.json",
+    }
+    asset = (
+        len(parts) == 3 and parts[:2] == (theme_name, "assets")
+        and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", parts[2])
+        and PurePosixPath(parts[2]).suffix.lower() in IMAGE_EXTENSIONS
+    )
+    if relative not in fixed and not asset:
+        raise ValueError(f"Unsafe generated path in marker: {relative}")
+    candidate = output_dir / relative
+    current = candidate
+    while current != output_dir:
+        if current.is_symlink():
+            raise ValueError(f"Refusing symlinked output path: {relative}")
+        current = current.parent
+    if candidate.exists() and not candidate.is_file():
+        raise ValueError(f"Generated output is not a file: {relative}")
+    return candidate
+
+
+def prepare_output(output_dir: Path, theme_name: str, force: bool, generated: list[str]) -> tuple[Path, Path, Path, list[str]]:
     output_dir.mkdir(parents=True, exist_ok=True)
     artifact_dir = output_dir / theme_name
     marker = artifact_dir / ".pptx-to-marp-theme.json"
     css_path = output_dir / f"{theme_name}.css"
+    previous_files: list[str] = []
+    for relative in generated:
+        managed_output_path(output_dir, theme_name, relative)
     if css_path.exists() or artifact_dir.exists():
         if not force:
             raise ValueError(
@@ -871,14 +910,19 @@ def prepare_output(output_dir: Path, theme_name: str, force: bool) -> tuple[Path
                 f"Refusing to overwrite unrecognized output directory without marker: {artifact_dir}"
             )
         previous = json.loads(marker.read_text(encoding="utf-8"))
-        for relative in previous.get("generatedFiles", []):
-            candidate = (output_dir / relative).resolve()
-            if output_dir.resolve() not in candidate.parents and candidate != output_dir.resolve():
-                raise ValueError(f"Unsafe generated path in marker: {relative}")
-            if candidate.is_file():
-                candidate.unlink()
+        if not isinstance(previous, dict):
+            raise ValueError(f"Invalid extraction marker: {marker}")
+        previous_files = previous.get("generatedFiles")
+        if (previous.get("schemaVersion") != 1 or previous.get("theme") != theme_name
+                or not isinstance(previous_files, list) or not previous_files):
+            raise ValueError(f"Invalid extraction marker: {marker}")
+        for relative in previous_files:
+            managed_output_path(output_dir, theme_name, relative)
+        for relative in generated:
+            if relative not in previous_files and (output_dir / relative).exists():
+                raise ValueError(f"Refusing to overwrite unrecorded output: {relative}")
     (artifact_dir / "assets").mkdir(parents=True, exist_ok=True)
-    return artifact_dir, marker, css_path
+    return artifact_dir, marker, css_path, previous_files
 
 
 def build_report(
@@ -1028,13 +1072,20 @@ def write_outputs(
     force: bool,
     css_imports: list[str],
 ) -> dict:
-    artifact_dir, marker, css_path = prepare_output(output_dir, theme_name, force)
     report = build_report(source, archive, output_dir, theme_name, css_imports)
     media_by_path = {
         item["packagePath"]: item
         for item in inspect_media(archive, report["slideSize"])
     }
     generated: list[str] = []
+    planned = [
+        f"{theme_name}.css", f"{theme_name}/sample.md", f"{theme_name}/README.md",
+        f"{theme_name}/theme-report.json", f"{theme_name}/.pptx-to-marp-theme.json",
+        *(f"{theme_name}/assets/{item['filename']}" for item in media_by_path.values()),
+    ]
+    artifact_dir, marker, css_path, previous_files = prepare_output(
+        output_dir, theme_name, force, planned,
+    )
 
     assets_dir = artifact_dir / "assets"
     for item in media_by_path.values():
@@ -1089,6 +1140,11 @@ def write_outputs(
         "generatedFiles": sorted(generated + [str(marker.relative_to(output_dir))]),
     }
     marker.write_text(f"{json.dumps(marker_payload, indent=2)}\n", encoding="utf-8")
+    for relative in previous_files:
+        if relative not in planned:
+            candidate = managed_output_path(output_dir, theme_name, relative)
+            if candidate.is_file():
+                candidate.unlink()
     return report
 
 
@@ -1109,7 +1165,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv or sys.argv[1:])
+    args = parse_args(sys.argv[1:] if argv is None else argv)
     source = Path(args.template)
     if not source.is_file():
         print(f"extract-pptx-theme: file not found: {source}", file=sys.stderr)
@@ -1117,10 +1173,10 @@ def main(argv: list[str] | None = None) -> int:
     if source.suffix.lower() not in {".pptx", ".potx"}:
         print("extract-pptx-theme: input must use .pptx or .potx", file=sys.stderr)
         return 2
-    theme_name = validate_theme_name(args.theme_name or slugify(source.stem))
-    css_imports = [validate_css_import(value) for value in args.css_import]
-    output_dir = Path(args.output_dir)
     try:
+        theme_name = validate_theme_name(args.theme_name or slugify(source.stem))
+        css_imports = [validate_css_import(value) for value in args.css_import]
+        output_dir = Path(args.output_dir).resolve()
         with zipfile.ZipFile(source) as archive:
             validate_archive(archive)
             report = write_outputs(

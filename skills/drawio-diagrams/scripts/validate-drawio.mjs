@@ -2,8 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { extract } from "./make-drawio-svg.mjs";
+import { decodeXml, extract } from "./make-drawio-svg.mjs";
 
 const HELP = `Validate a native .drawio file or editable .drawio.svg.
 
@@ -16,19 +15,42 @@ Exit codes:
   2  Usage or read error`;
 
 function parseAttributes(source) {
-  const attributes = {};
-  const pattern = /([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-  for (const match of source.matchAll(pattern)) attributes[match[1]] = match[2] ?? match[3] ?? "";
+  const attributes = Object.create(null);
+  const pattern = /^\s+([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*(?:"([^"<]*)"|'([^'<]*)')/;
+  let remaining = source;
+  while (remaining.trim()) {
+    const match = remaining.match(pattern);
+    if (!match) throw new Error("Malformed XML attribute.");
+    if (Object.hasOwn(attributes, match[1])) throw new Error(`Duplicate XML attribute ${match[1]}.`);
+    attributes[match[1]] = decodeXml(match[2] ?? match[3]);
+    remaining = remaining.slice(match[0].length);
+  }
   return attributes;
 }
 
 export function parseXml(source) {
-  const tokens = source.match(/<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<![^>]*>|<\/?[^>]+>/g) ?? [];
+  if (/<!DOCTYPE|<!ENTITY/i.test(source) || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(source)) {
+    throw new Error("Unsupported XML declaration or control character.");
+  }
+  const tokens = source.matchAll(/<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[[\s\S]*?\]\]>|<\/?(?:[^"'<>]|"[^"]*"|'[^']*')+>/g);
   const stack = [];
   let documentRoot = null;
+  let offset = 0;
+  function appendText(text, cdata = false) {
+    if (!cdata && text.includes("<")) throw new Error("Malformed XML markup.");
+    if (!stack.length && text.trim()) throw new Error("Text outside the XML root.");
+    if (stack.length) stack.at(-1).text += cdata ? text : decodeXml(text);
+  }
 
-  for (const token of tokens) {
-    if (token.startsWith("<!--") || token.startsWith("<?") || token.startsWith("<!")) continue;
+  for (const match of tokens) {
+    appendText(source.slice(offset, match.index));
+    const token = match[0];
+    offset = match.index + token.length;
+    if (token.startsWith("<!--") || token.startsWith("<?")) continue;
+    if (token.startsWith("<![CDATA[")) {
+      appendText(token.slice(9, -3), true);
+      continue;
+    }
     if (token.startsWith("</")) {
       const name = token.slice(2, -1).trim();
       const current = stack.pop();
@@ -46,6 +68,7 @@ export function parseXml(source) {
       name,
       attributes: parseAttributes(body.slice(name.length)),
       children: [],
+      text: "",
     };
     if (stack.length) stack.at(-1).children.push(node);
     else if (documentRoot === null) documentRoot = node;
@@ -53,6 +76,7 @@ export function parseXml(source) {
     if (!selfClosing) stack.push(node);
   }
 
+  appendText(source.slice(offset));
   if (stack.length) throw new Error(`Unclosed XML tag <${stack.at(-1).name}>.`);
   if (!documentRoot) throw new Error("XML has no root element.");
   return documentRoot;
@@ -99,7 +123,11 @@ function validateMxfile(xml, result, { accessibleTitle = false } = {}) {
 
     const model = child(diagram, "mxGraphModel");
     if (!model) {
-      result.warnings.push(`${prefix} Compressed diagram content was not structurally inspected.`);
+      if (diagram.children.length === 0 && /^[A-Za-z0-9+/=\s]+$/.test(diagram.text.trim())) {
+        result.warnings.push(`${prefix} Compressed diagram content was not structurally inspected.`);
+      } else {
+        result.errors.push(`${prefix} Missing <mxGraphModel> or compressed diagram content.`);
+      }
       return;
     }
     const modelRoot = child(model, "root");
@@ -157,6 +185,11 @@ function validateMxfile(xml, result, { accessibleTitle = false } = {}) {
         } else {
           const width = finiteAttribute(geometry, "width");
           const height = finiteAttribute(geometry, "height");
+          for (const coordinate of ["x", "y"]) {
+            if (Object.hasOwn(geometry.attributes, coordinate) && finiteAttribute(geometry, coordinate) === null) {
+              result.errors.push(`${prefix} Vertex id="${id}" has invalid ${coordinate}.`);
+            }
+          }
           if (width === null || width <= 0) result.errors.push(`${prefix} Vertex id="${id}" has invalid width.`);
           if (height === null || height <= 0) result.errors.push(`${prefix} Vertex id="${id}" has invalid height.`);
         }
@@ -172,6 +205,9 @@ function validateMxfile(xml, result, { accessibleTitle = false } = {}) {
       if (cell.attributes.edge === "1") {
         result.stats.edges += 1;
         const geometry = child(cell, "mxGeometry");
+        if (!geometry || geometry.attributes.relative !== "1") {
+          result.errors.push(`${prefix} Edge id="${id}" requires relative geometry.`);
+        }
         const points = geometry ? children(geometry, "mxPoint") : [];
         const hasSourcePoint = points.some((point) => point.attributes.as === "sourcePoint");
         const hasTargetPoint = points.some((point) => point.attributes.as === "targetPoint");
@@ -205,11 +241,13 @@ export function validateDocument(source, filename = "diagram") {
   let accessibleTitle = false;
   if (/<svg\b/i.test(source.slice(0, 1000))) {
     result.type = "drawio.svg";
-    if (!/\srole=["']img["']/i.test(source)) result.errors.push("SVG must declare role=\"img\".");
-    if (!/<title\b/i.test(source)) result.errors.push("SVG must contain an accessible <title>.");
-    else accessibleTitle = true;
-    if (!/<desc\b/i.test(source)) result.errors.push("SVG must contain an accessible <desc>.");
     try {
+      const svg = parseXml(source);
+      if (svg.name !== "svg") throw new Error("SVG must be the document root.");
+      if (svg.attributes.role !== "img") result.errors.push("SVG must declare role=\"img\".");
+      accessibleTitle = Boolean(child(svg, "title")?.text.trim());
+      if (!accessibleTitle) result.errors.push("SVG must contain a non-empty accessible <title>.");
+      if (!child(svg, "desc")?.text.trim()) result.errors.push("SVG must contain a non-empty accessible <desc>.");
       xml = extract(source);
     } catch (error) {
       result.errors.push(error.message);
@@ -234,10 +272,15 @@ function printResult(result) {
 
 function main(argv) {
   const json = argv.includes("--json");
-  const positional = argv.filter((value) => !value.startsWith("-"));
+  const positional = argv.filter((value) => value !== "--json");
   if (argv.includes("-h") || argv.includes("--help")) {
     console.log(HELP);
     return 0;
+  }
+  const unknown = positional.find((value) => value.startsWith("-"));
+  if (unknown) {
+    console.error(`Unknown option: ${unknown}`);
+    return 2;
   }
   if (positional.length !== 1) {
     console.error(HELP);
@@ -257,5 +300,4 @@ function main(argv) {
   return result.errors.length ? 1 : 0;
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-if (isMain) process.exitCode = main(process.argv.slice(2));
+if (import.meta.main) process.exitCode = main(process.argv.slice(2));

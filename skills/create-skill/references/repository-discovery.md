@@ -58,6 +58,12 @@ required. When catalog is enabled, entry and image directories must exist before
 `docs/thumbnail-prompts.md` remains optional and is updated only when present. Managed repository
 identity supplies the real `owner/repository` install command.
 
+When `.waza.yaml` is present, registration also scaffolds root Waza trigger
+evaluations. Its `paths.skills` must match the discovered skill root and
+`paths.evals` must be `evals/`; other layouts require explicit adaptation.
+Existing authored trigger tasks are never replaced. Review the generated
+positive/negative prompts and run Waza coverage and trigger checks before merging.
+
 ## Existing repositories
 
 Without managed config, discovery searches for exactly one populated directory named `skills`.
@@ -65,8 +71,9 @@ It recognizes only established exact paths listed above. Missing optional surfac
 Contradictory catalog entry and image paths, multiple populated skill roots, path traversal, and
 symlinked write destinations stop the operation before writes.
 
-The tool does not guess custom manifest formats. Add managed config when an existing repository
-uses nonstandard locations or multiple registration systems.
+The tool does not guess custom manifest formats. Managed config supplies the
+canonical paths above; it does not provide custom path overrides. Reconcile a
+nonstandard layout or multiple registration systems explicitly before creation.
 
 ## Apply contract
 

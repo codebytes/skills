@@ -11,8 +11,9 @@ defaults:
 
 scoring:
   weights:
-    prompt: 0.8
-    skill-invocation: 0.2
+    prompt: 0.7
+    skill-invocation: 0.15
+    diff-empty: 0.15
   threshold: 0.8
 
 stimuli:
@@ -44,3 +45,4 @@ stimuli:
       - type: skill-invocation
         config:
           required: [marp-authoring]
+      - type: diff-empty

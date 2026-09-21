@@ -65,6 +65,10 @@ node <skill-directory>/scripts/render-mermaid.mjs \
 ```
 
 See `assets/example-chart.json` for the chart specification.
+Chart values must be finite JSON numbers; missing values, booleans, and numeric
+strings are rejected rather than silently converted to zero. Run helpers with
+Node.js 22.20+. Mermaid rendering also needs the locked npm dependencies and a
+compatible Chrome/Chromium executable; see the skill README for setup.
 
 ## Safety
 

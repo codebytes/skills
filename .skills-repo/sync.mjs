@@ -36,9 +36,9 @@ function digest(bytes, normalization) {
 
 function renderReadme(readme, config) {
   const start = "\n## Install\n";
-  const end = "\n## Validation\n";
+  const end = "\n## Catalog\n";
   if (readme.split(start).length !== 2 || readme.split(end).length !== 2) {
-    throw new Error("README must have exactly one Install and one Validation heading");
+    throw new Error("README must have exactly one Install and one Catalog heading");
   }
   const startIndex = readme.indexOf(start);
   const endIndex = readme.indexOf(end);
@@ -48,6 +48,7 @@ function renderReadme(readme, config) {
     repository: `${config.owner.login}/${config.repository.name}`,
     repositoryUrl: config.repository.url,
     packageName: config.package.name,
+    defaultBranch: config.github.defaultBranch,
   })) {
     template = template.replaceAll(`{{${key}}}`, value);
   }
@@ -145,7 +146,7 @@ export function run(argv, { cwd = process.cwd(), output = process.stdout } = {})
   return mode === "--check" && plan.mutations.length > 0 ? 1 : 0;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   try {
     process.exitCode = run(process.argv.slice(2));
   } catch (error) {

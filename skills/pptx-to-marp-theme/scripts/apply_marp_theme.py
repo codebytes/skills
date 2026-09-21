@@ -18,19 +18,19 @@ def theme_metadata(css: str) -> tuple[str, str | None]:
     return theme.group(1), size.group(1) if size else None
 
 
-def split_frontmatter(markdown: str) -> tuple[list[str], list[str], str]:
+def split_frontmatter(markdown: str) -> tuple[list[str], str, str]:
     newline = "\r\n" if "\r\n" in markdown else "\n"
-    lines = markdown.replace("\r\n", "\n").split("\n")
+    lines = markdown.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
-        return [], lines, newline
+        return [], markdown, newline
     end = next((index for index, line in enumerate(lines[1:], 1) if line.strip() == "---"), None)
     if end is None:
         raise ValueError("Markdown starts with frontmatter but has no closing delimiter.")
-    return lines[1:end], lines[end + 1:], newline
+    return [line.rstrip("\r\n") for line in lines[1:end]], "".join(lines[end + 1:]), newline
 
 
 def set_scalar(lines: list[str], key: str, value: str) -> tuple[list[str], str | None]:
-    pattern = re.compile(rf"^{re.escape(key)}\s*:\s*(.*?)\s*$")
+    pattern = re.compile(rf"^(?:{re.escape(key)}|'{re.escape(key)}'|\"{re.escape(key)}\")\s*:\s*(.*?)\s*$")
     matches = [index for index, line in enumerate(lines) if pattern.match(line)]
     if len(matches) > 1:
         raise ValueError(f"Frontmatter contains duplicate '{key}' keys.")
@@ -38,7 +38,19 @@ def set_scalar(lines: list[str], key: str, value: str) -> tuple[list[str], str |
     updated = list(lines)
     replacement = f"{key}: {value}"
     if matches:
-        updated[matches[0]] = replacement
+        start = matches[0]
+        end = start + 1
+        if re.fullmatch(r"[>|](?:[+-]?[1-9]?|[1-9]?[+-]?)(?:\s+#.*)?", previous or ""):
+            while end < len(lines) and (not lines[end].strip() or lines[end][0].isspace()):
+                end += 1
+            previous = "\n".join(lines[start:end])
+        elif not previous or previous.startswith(("[", "{")):
+            raise ValueError(f"Frontmatter '{key}' must be a scalar value.")
+        elif previous.startswith(("'", '"')) and not re.fullmatch(
+            rf"{re.escape(previous[0])}.*{re.escape(previous[0])}(?:\s+#.*)?", previous,
+        ):
+            raise ValueError(f"Frontmatter '{key}' uses an unsupported multiline quoted value.")
+        updated[start:end] = [replacement]
     else:
         updated.append(replacement)
     return updated, previous
@@ -78,14 +90,15 @@ def missing_theme_assets(css_path: Path, css: str) -> list[str]:
 
 
 def update_deck(markdown: str, theme: str, size: str | None) -> tuple[str, dict]:
-    frontmatter, body, newline = split_frontmatter(markdown)
+    bom = "\ufeff" if markdown.startswith("\ufeff") else ""
+    frontmatter, body, newline = split_frontmatter(markdown.removeprefix("\ufeff"))
     frontmatter, old_marp = set_scalar(frontmatter, "marp", "true")
     frontmatter, old_theme = set_scalar(frontmatter, "theme", theme)
     old_size = None
     if size:
         frontmatter, old_size = set_scalar(frontmatter, "size", size)
-    updated = ["---", *frontmatter, "---", *body]
-    return newline.join(updated), {
+    updated = newline.join(["---", *frontmatter, "---"]) + newline + body
+    return bom + updated, {
         "marp": {"before": old_marp, "after": "true"},
         "theme": {"before": old_theme, "after": theme},
         "size": {"before": old_size, "after": size} if size else None,
@@ -103,7 +116,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv or sys.argv[1:])
+    args = parse_args(sys.argv[1:] if argv is None else argv)
     css_path = Path(args.theme_css)
     if not css_path.is_file():
         print(f"apply-marp-theme: theme CSS not found: {css_path}", file=sys.stderr)
@@ -114,11 +127,13 @@ def main(argv: list[str] | None = None) -> int:
         supported_classes = classes_in_theme(css)
         asset_warnings = missing_theme_assets(css_path, css)
         results = []
+        updates = []
         for deck_value in args.decks:
             deck = Path(deck_value)
             if not deck.is_file():
                 raise ValueError(f"Deck not found: {deck}")
-            markdown = deck.read_text(encoding="utf-8")
+            with deck.open(encoding="utf-8", newline="") as stream:
+                markdown = stream.read()
             updated, changes = update_deck(
                 markdown,
                 theme,
@@ -157,10 +172,13 @@ def main(argv: list[str] | None = None) -> int:
                     external_dependencies
                 ),
             }
-            if args.write and updated != markdown:
+            if updated != markdown:
+                updates.append((deck, updated))
+            results.append(result)
+        if args.write:
+            for deck, updated in updates:
                 with deck.open("w", encoding="utf-8", newline="") as stream:
                     stream.write(updated)
-            results.append(result)
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"apply-marp-theme: {exc}", file=sys.stderr)
         return 1

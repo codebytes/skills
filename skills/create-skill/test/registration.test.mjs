@@ -22,7 +22,7 @@ import {
 } from "../scripts/registration.mjs";
 import { defaultArtPrompt } from "../scripts/art.mjs";
 import { generatePlaceholder } from "../scripts/providers.mjs";
-import { createRepositoryFixture } from "./helpers.mjs";
+import { createRepositoryFixture, write } from "./helpers.mjs";
 
 const manifest = createSkillManifest({
   name: "release-notes-helper",
@@ -187,6 +187,24 @@ test("managed registration updates managed state hashes", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("Waza repositories receive separate positive and negative trigger scaffolds", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "create-skill-waza-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  createRepositoryFixture(root, { managed: true });
+  write(join(root, ".waza.yaml"), "paths:\n  skills: skills/\n  evals: evals/\n");
+  const profile = discoverRepository(root);
+  const plan = buildCreatePlan(profile, manifest, { art: placeholderArt() });
+  const files = new Map(plan.mutations.map((mutation) => [mutation.path, mutation.bytes.toString()]));
+  assert.match(files.get(join(root, "evals", manifest.name, "eval.yaml")), /executor: mock/);
+  assert.match(files.get(join(root, "evals", manifest.name, "tasks/negative-trigger-1.yaml")), /mode: negative/);
+  applyPlan(plan, { approval: plan.hash });
+  const authored = join(root, "evals", manifest.name, "tasks/positive-trigger-1.yaml");
+  writeFileSync(authored, "# Authored task to preserve\n");
+  assert.equal(buildRegistrationUpdates(profile, manifest, placeholderArt()).has(authored), false);
+  writeFileSync(join(root, ".waza.yaml"), "paths:\n  skills: skills/\n  evals: custom-evals/\n");
+  assert.throws(() => buildRegistrationUpdates(profile, manifest, placeholderArt()), /Waza registration requires/);
 });
 
 test("failed apply removes transaction-created directories so retry is possible", () => {

@@ -12,6 +12,9 @@ Reload your agent skills, then invoke `/pptx-to-marp-theme`.
 
 ## Usage
 
+Run commands from the installed skill directory, or use absolute script/input
+paths. The conversion scripts require Python 3.10+.
+
 Extract a PowerPoint template:
 
 ```sh
@@ -39,6 +42,8 @@ Visual comparison and final refinement still require rendering the original
 template and generated Marp sample.
 
 ## Development
+
+Run from this skill's directory with Node.js 22.20+ and Python 3.10+:
 
 ```sh
 npm ci --ignore-scripts

@@ -1,6 +1,6 @@
 ---
 marp: true
-theme: custom-default
+theme: default
 paginate: true
 math: mathjax
 ---
@@ -46,27 +46,20 @@ One sentence that frames the next section
 
 ---
 
-<!-- _class: columns -->
-
 # Comparison
 
-## Option A
-
-- Strength
-- Tradeoff
-
-## Option B
-
-- Strength
-- Tradeoff
+| Option | Strength | Tradeoff |
+| --- | --- | --- |
+| A | First advantage | First constraint |
+| B | Second advantage | Second constraint |
 
 ---
 
 ## Evidence
 
-![center](img/example.svg)
+State the key finding, its units, and its source.
 
-<!-- State the source, unit, timeframe, and conclusion represented by the visual. -->
+<!-- Replace this text with a reviewed static visual and meaningful alt text when an asset is ready. -->
 
 ---
 

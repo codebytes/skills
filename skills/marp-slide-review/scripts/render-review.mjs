@@ -2,10 +2,12 @@
 
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -14,7 +16,6 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const MARP_VERSION = "4.5.0";
 const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const HELP = `Render a Marp deck to PNGs and an HTML review gallery.
 
@@ -25,6 +26,7 @@ Options:
   --theme-set <dir>      Theme directory (defaults to slides/themes when present)
   --output <dir>         Output directory (defaults to a temporary directory)
   --allow-local-files    Permit trusted local assets during browser rendering
+  --html                 Enable embedded HTML only for a trusted deck
   --pdf                  Also render a PDF for print-path comparison
   --browser <name>       chrome, edge, firefox, or auto
   --json                 Print machine-readable output
@@ -36,6 +38,7 @@ export function parseArgs(argv) {
     themeSet: null,
     output: null,
     allowLocalFiles: false,
+    html: false,
     pdf: false,
     browser: "auto",
     json: false,
@@ -43,10 +46,15 @@ export function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
+    if (["--theme-set", "--output", "--browser"].includes(value) &&
+        (argv[index + 1] === undefined || argv[index + 1].startsWith("-"))) {
+      throw new Error(`${value} requires a value`);
+    }
     if (value === "-h" || value === "--help") result.help = true;
     else if (value === "--theme-set") result.themeSet = argv[++index];
     else if (value === "--output") result.output = argv[++index];
     else if (value === "--allow-local-files") result.allowLocalFiles = true;
+    else if (value === "--html") result.html = true;
     else if (value === "--pdf") result.pdf = true;
     else if (value === "--browser") result.browser = argv[++index];
     else if (value === "--json") result.json = true;
@@ -69,18 +77,18 @@ function escapeHtml(value) {
 }
 
 function marpCommand() {
+  if (process.env.MARP_CMD) {
+    const executable = process.env.MARP_CMD;
+    return /\.(?:mjs|cjs|js)$/.test(executable)
+      ? { command: process.execPath, prefix: [executable] }
+      : { command: executable, prefix: [] };
+  }
   const localCli = join(SKILL_ROOT, "node_modules", "@marp-team", "marp-cli", "marp-cli.js");
   if (existsSync(localCli)) return { command: process.execPath, prefix: [localCli] };
-  return {
-    command: process.platform === "win32" ? "npx.cmd" : "npx",
-    prefix: ["--yes", `@marp-team/marp-cli@${MARP_VERSION}`],
-  };
+  throw new Error("Marp CLI is not installed. Run npm ci --ignore-scripts in the skill directory.");
 }
 
 function runMarp(args) {
-  if (process.env.MARP_CMD) {
-    throw new Error("render-review requires a single MARP executable path; unset MARP_CMD and install dependencies.");
-  }
   const cli = marpCommand();
   const result = spawnSync(cli.command, [...cli.prefix, ...args], {
     encoding: "utf8",
@@ -104,12 +112,20 @@ function prepareOutput(requested) {
   if (entries.length > 0 && !managed) {
     throw new Error(`Output directory is not empty and is not a prior review: ${output}`);
   }
-  for (const entry of entries) {
-    if (/^slide\.\d+\.png$/.test(entry) || ["deck.pdf", "index.html", "review-manifest.json"].includes(entry)) {
-      rmSync(join(output, entry), { force: true });
-    }
-  }
+  if (lstatSync(output).isSymbolicLink()) throw new Error(`Output directory is a symbolic link: ${output}`);
   return output;
+}
+
+function previousFiles(output) {
+  const marker = join(output, "review-manifest.json");
+  if (!existsSync(marker)) return new Set();
+  if (lstatSync(marker).isSymbolicLink()) throw new Error("Review manifest must be a regular file.");
+  const previous = JSON.parse(readFileSync(marker, "utf8"));
+  if (!previous || !Array.isArray(previous.images) || !previous.images.length ||
+      previous.images.some((file) => typeof file !== "string" || !/^slide\.\d+\.png$/.test(file))) {
+    throw new Error("Invalid previous review manifest.");
+  }
+  return new Set([...previous.images, "index.html", "review-manifest.json", ...(previous.pdf ? ["deck.pdf"] : [])]);
 }
 
 export function buildGallery({ deck, images, pdf, warnings }) {
@@ -184,46 +200,66 @@ function main(argv) {
   const deck = resolve(args.deck);
   if (!existsSync(deck)) throw new Error(`Deck not found: ${deck}`);
   const output = prepareOutput(args.output);
-  const themeSet = args.themeSet ?? (existsSync("slides/themes") ? "slides/themes" : null);
-  const common = ["--no-stdin", "--html", "--browser", args.browser];
-  if (themeSet) common.push("--theme-set", resolve(themeSet));
-  if (args.allowLocalFiles) common.push("--allow-local-files");
+  const owned = previousFiles(output);
+  const stage = mkdtempSync(join(dirname(output), ".marp-review-"));
+  try {
+    const themeSet = args.themeSet ?? (existsSync("slides/themes") ? "slides/themes" : null);
+    const common = ["--no-stdin", "--browser", args.browser, args.html ? "--html" : "--no-html"];
+    if (themeSet) common.push("--theme-set", resolve(themeSet));
+    if (args.allowLocalFiles) common.push("--allow-local-files");
 
-  runMarp([...common, "--images", "png", "-o", join(output, "slide.png"), "--", deck]);
-  const images = sortSlideImages(
-    readdirSync(output).filter((name) => /^slide\.\d+\.png$/.test(name)),
-  );
-  if (images.length === 0) throw new Error("Marp did not generate any slide images.");
+    runMarp([...common, "--images", "png", "-o", join(stage, "slide.png"), "--", deck]);
+    const images = sortSlideImages(
+      readdirSync(stage).filter((name) => /^slide\.\d+\.png$/.test(name)),
+    );
+    if (images.length === 0) throw new Error("Marp did not generate any slide images.");
 
-  let pdf = null;
-  if (args.pdf) {
-    pdf = "deck.pdf";
-    runMarp([...common, "--pdf", "--pdf-outlines", "-o", join(output, pdf), "--", deck]);
+    let pdf = null;
+    if (args.pdf) {
+      pdf = "deck.pdf";
+      runMarp([...common, "--pdf", "--pdf-outlines", "-o", join(stage, pdf), "--", deck]);
+      if (!existsSync(join(stage, pdf)) || readFileSync(join(stage, pdf)).subarray(0, 5).toString() !== "%PDF-") {
+        throw new Error("Marp did not generate a valid PDF.");
+      }
+    }
+
+    const warnings = detectWarnings(readFileSync(deck, "utf8"));
+    writeFileSync(join(stage, "index.html"), buildGallery({ deck, images, pdf, warnings }));
+    const result = {
+      deck,
+      output,
+      gallery: join(output, "index.html"),
+      images,
+      pdf: pdf ? join(output, pdf) : null,
+      warnings,
+    };
+    writeFileSync(join(stage, "review-manifest.json"), `${JSON.stringify(result, null, 2)}\n`);
+    const generated = new Set([...images, "index.html", "review-manifest.json", ...(pdf ? [pdf] : [])]);
+    for (const file of new Set([...owned, ...generated])) {
+      const target = join(output, file);
+      const stat = lstatSync(target, { throwIfNoEntry: false });
+      if (stat && (!owned.has(file) || !stat.isFile())) {
+        throw new Error(`Refusing to replace unowned or non-regular review output: ${target}`);
+      }
+    }
+    for (const file of generated) renameSync(join(stage, file), join(output, file));
+    for (const file of owned) {
+      if (!generated.has(file)) rmSync(join(output, file), { force: true });
+    }
+
+    if (args.json) console.log(JSON.stringify(result, null, 2));
+    else {
+      console.log(`Gallery: ${result.gallery}`);
+      if (result.pdf) console.log(`PDF: ${result.pdf}`);
+      for (const warning of warnings) console.log(`Warning: ${warning}`);
+    }
+    return 0;
+  } finally {
+    rmSync(stage, { recursive: true, force: true });
   }
-
-  const warnings = detectWarnings(readFileSync(deck, "utf8"));
-  writeFileSync(join(output, "index.html"), buildGallery({ deck, images, pdf, warnings }));
-  const result = {
-    deck,
-    output,
-    gallery: join(output, "index.html"),
-    images,
-    pdf: pdf ? join(output, pdf) : null,
-    warnings,
-  };
-  writeFileSync(join(output, "review-manifest.json"), `${JSON.stringify(result, null, 2)}\n`);
-
-  if (args.json) console.log(JSON.stringify(result, null, 2));
-  else {
-    console.log(`Gallery: ${result.gallery}`);
-    if (result.pdf) console.log(`PDF: ${result.pdf}`);
-    for (const warning of warnings) console.log(`Warning: ${warning}`);
-  }
-  return 0;
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-if (isMain) {
+if (import.meta.main) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

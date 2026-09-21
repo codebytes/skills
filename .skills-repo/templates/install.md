@@ -106,6 +106,10 @@ Canonical content lives in `skills/`. Root `plugin.json` follows the published
 **Agent Plugins 1.0.0** schema. Native Claude, Codex, Cursor, and Gemini discovery
 manifests are retained for their respective clients.
 
+Cursor loads the root standard `plugin.json`; its marketplace points to that
+package. A second `.cursor-plugin/plugin.json` is unnecessary for this
+skills-only collection.
+
 OpenAI's plugin format also supports ChatGPT on supported surfaces, but adding a
 repository marketplace does **not** publish it to the universal public directory.
 Workspace policy and the selected surface control availability. The Codex IDE
@@ -165,6 +169,7 @@ August 6; the 1.1 specification is still a working draft, not a migration target
   and [CLI plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference).
 - [VS Code agent plugins](https://code.visualstudio.com/docs/agent-customization/agent-plugins)
   and [VS Code 1.138 release](https://code.visualstudio.com/updates/v1_138).
+- [Cursor plugin formats](https://cursor.com/docs/reference/plugins).
 - [Rider skills](https://www.jetbrains.com/help/rider/AI_skills_hooks.html),
   [AI Assistant Skills Manager](https://www.jetbrains.com/help/ai-assistant/agent-skills.html),
   and [Junie skills](https://junie.jetbrains.com/docs/agent-skills.html).
@@ -172,7 +177,7 @@ August 6; the 1.1 specification is still a working draft, not a migration target
 ### Maintaining these generated views
 
 Edit `skills-repo.config.json` for repository identity and
-`.skills-repo/templates/install.md` for the installation/update guidance above.
+`.skills-repo/templates/install.md` for installation, updates, and validation guidance.
 From the repository root:
 
 ```sh
@@ -182,7 +187,7 @@ node .skills-repo/sync.mjs --check
 ```
 
 This narrowly scoped sync updates the native Codex marketplace, this README's
-installation/update sections, and their managed hashes. It preserves the generated
+installation/update/validation sections, and their managed hashes. It preserves the generated
 skill table and other manifests, rejects unexpected managed-file edits, and uses
 the bundled atomic writer. It does not install clients, access the network, or
 replace the full `create-skills-repo sync` lifecycle used after adding/removing
@@ -190,3 +195,111 @@ skills or changing repository identity. Run this local sync after that lifecycle
 too, so the documentation and compatibility views remain current. The native
 Codex marketplace intentionally retains its local-root source and requires a
 client with the upstream root-local fix.
+
+## Validation
+
+Use Node.js **22.20+** for the skill helpers and Python **3.10+** for
+`pptx-to-marp-theme`. The catalog requires Node.js **24+** and npm **11.10+**.
+Run the following from the repository root. Package installs use your configured
+npm feed; do not bypass organizational feed policy when a package is unavailable.
+
+```sh
+npm ci --prefix .github/tools/vally --ignore-scripts
+npm test --prefix .github/tools/vally
+node .skills-repo/sync.mjs --check
+```
+
+The root `npm test` command above runs repository tests, not the Vally
+implementation's own tests. Lint and run each skill's deterministic tests with:
+
+```sh
+vally="$PWD/.github/tools/vally/node_modules/.bin/vally"
+for skill in skills/*; do
+  [ -f "$skill/SKILL.md" ] || continue
+  id=${skill#skills/}
+  "$vally" lint "$skill" --strict
+  "$vally" lint --eval-spec "$skill/evals/$id/eval.yaml" --strict
+  npm ci --prefix "$skill" --ignore-scripts
+  npm test --prefix "$skill"
+done
+```
+
+## Skill quality
+
+| Check | What it establishes |
+| --- | --- |
+| Repository tests | Manifest contracts, marketplace paths, complete skill/eval/catalog coverage, local documentation links, and portable CLI entry points |
+| Skill-local tests | Deterministic behavior of scripts, fixtures, and validation failures |
+| Vally lint | Static skill and capability-eval specification checks |
+| Waza mock trigger suites | Deterministic trigger-grader checks and declared requirement coverage, not measured live-agent routing accuracy |
+| Vally agent evaluations | Workflow reasoning, skill invocation, and safety behavior; these are not a complete end-to-end rendering benchmark |
+| Distribution sync | Generated compatibility and README views match their authored sources |
+| Catalog build | Astro can generate all catalog pages and assets |
+
+Install the checksum-verified Waza version documented in
+[`evals/README.md`](evals/README.md), then run:
+
+```sh
+waza run --no-cache --no-summary
+waza tokens check --strict
+for skill in skills/*; do
+  [ -f "$skill/SKILL.md" ] || continue
+  id=${skill#skills/}
+  waza spec verify --skill "$skill" --eval "evals/$id/eval.yaml" --fail
+done
+```
+
+`waza spec verify` maps documented requirements to task coverage; a passing
+coverage check does not prove that an agent completed those behaviors.
+CI keeps these deterministic checks separate from credentialed evaluations.
+
+### Run agent evaluations manually
+
+The **Skill Eval** workflow runs daily at **03:00 UTC** and accepts a manual
+dispatch. To evaluate one skill, or omit `-f skill=...` to evaluate all skills:
+
+```sh
+gh workflow run skill-eval.yml --repo {{repository}} --ref {{defaultBranch}} -f skill=create-skill
+gh run list --repo {{repository}} --workflow skill-eval.yml --limit 5
+gh run watch <run-id> --repo {{repository}}
+```
+
+The workflow grants `copilot-requests: write` and retains per-skill evaluation
+results as workflow artifacts. GitHub/Copilot policy and entitlement must permit
+the requests. Dispatching the workflow consumes agent usage.
+
+For a local run, authenticate the Copilot client used by the SDK or set
+`COPILOT_GITHUB_TOKEN` securely with Copilot request access. A token returned by
+`gh auth token` does not necessarily have that permission. Never save tokens in
+repository files. After installing the root Vally toolchain:
+
+```sh
+.github/tools/vally/node_modules/.bin/vally eval \
+  --eval-spec skills/create-skill/evals/create-skill/eval.yaml \
+  --skill-dir skills/create-skill \
+  --output-dir skills/create-skill/vally-results \
+  --runs 1 --workers 1 --max-retries 0 --junit
+```
+
+Replace `create-skill` in all three paths for another skill. Root
+`evals/<name>/eval.yaml` files are **Waza** specs; Vally specs are inside
+`skills/<name>/evals/<name>/`. These formats are not interchangeable.
+Local skill scripts also provide `npm run eval --prefix skills/<name>` after
+their dependencies are installed.
+
+Vally's Copilot SDK depends transitively on Koffi. It is not needed by Waza or
+the dependency-free helpers, but must not be removed from an evaluator lockfile
+to work around a package-feed failure. The Vally 0.16 skill toolchains pin
+Koffi **3.2.1** and Hono **4.13.7** through npm overrides because the configured
+Microsoft feed did not serve the previously locked 3.3.0/4.13.8 releases.
+Both pins satisfy their parents' declared dependency ranges. Reassess the
+overrides when the feed has the newer artifacts; regenerate locks with npm
+and verify a clean install before removing them. Do not add a public-registry
+override or HTTP proxy setting to this repository.
+
+Build the catalog without deploying it:
+
+```sh
+npm ci --prefix site --ignore-scripts
+npm run build --prefix site
+```

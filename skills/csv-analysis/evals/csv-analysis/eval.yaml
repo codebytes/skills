@@ -11,8 +11,9 @@ defaults:
 
 scoring:
   weights:
-    prompt: 0.8
-    skill-invocation: 0.2
+    prompt: 0.7
+    skill-invocation: 0.15
+    diff-empty: 0.15
   threshold: 0.8
 
 stimuli:
@@ -41,3 +42,43 @@ stimuli:
       - type: skill-invocation
         config:
           required: [csv-analysis]
+      - type: diff-empty
+
+  - name: computes-known-data-without-changing-identifiers
+    prompt: |
+      Invoke csv-analysis and analyze this CSV exactly as provided. Treat id as
+      an identifier, treat NA as missing, use population standard deviation, and
+      count duplicate rows after the first occurrence. Return a concise report
+      with counts and statistics. Do not perform network or repository writes.
+
+      id,amount,note
+      001,10,"first, entry"
+      002,NA,missing
+      003,30,third
+      003,30,third
+    tags:
+      scenario: known-data
+      cost: low
+    rubric:
+      - Reports four data records and three columns, with one duplicate after the first.
+      - Preserves identifiers 001, 002, and 003 instead of converting them to integers.
+      - Amount has three non-null values, one null, and two non-null unique values.
+      - Reports amount min 10, max 30, mean approximately 23.3333, median 30, population standard deviation approximately 9.4281.
+      - Parses the quoted comma as one note field and makes no write.
+    graders:
+      - type: prompt
+        name: exact-csv-results
+        config:
+          scoring: scale_1_5
+          threshold: 0.75
+          prompt: >-
+            Score 5 only if the report has 4 records, 3 columns, 1 duplicate,
+            string IDs retaining leading zeros, amount non-null count 3, null
+            count 1, distinct non-null count 2, min 10, max and median 30, mean
+            23.3333 and population standard deviation 9.4281 (rounding to two
+            decimals is acceptable). Score 1 for invented zero values,
+            incorrect parsing of the quoted comma, or a source mutation.
+      - type: skill-invocation
+        config:
+          required: [csv-analysis]
+      - type: diff-empty

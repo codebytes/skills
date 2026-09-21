@@ -24,5 +24,9 @@
     "@vscode/deviceid": false,
     "better-sqlite3": false,
     "koffi": false
+  },
+  "overrides": {
+    "koffi": "3.2.1",
+    "hono": "4.13.7"
   }
 }
