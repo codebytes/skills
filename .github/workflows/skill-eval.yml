@@ -117,4 +117,14 @@ jobs:
             --output-dir ./vally-results \
             --runs 5 \
             --workers 2 \
-            --max-retries 0
+            --max-retries 0 \
+            --junit
+
+      - name: Retain evaluation results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: skill-eval-${{ matrix.skill_id }}
+          path: ${{ matrix.skill }}/vally-results/
+          if-no-files-found: warn
+          retention-days: 7

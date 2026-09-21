@@ -2,7 +2,6 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const HELP = `Inspect a Marp deck without modifying it.
 
@@ -24,7 +23,7 @@ function cleanInline(value) {
 }
 
 function splitFrontmatter(source) {
-  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  const lines = source.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").split("\n");
   if (lines[0]?.trim() !== "---") return { frontmatter: "", body: lines };
 
   const end = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
@@ -35,23 +34,51 @@ function splitFrontmatter(source) {
   };
 }
 
+function scanLines(lines) {
+  const result = [];
+  let fence = null;
+  let comment = false;
+  for (const line of lines) {
+    if (fence) {
+      const closes = new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*$`).test(line);
+      result.push({ raw: line, text: closes ? "" : line, code: true, separator: false });
+      if (closes) fence = null;
+      continue;
+    }
+    const insideComment = comment;
+    let text = "";
+    let offset = 0;
+    while (offset < line.length) {
+      const marker = line.indexOf(comment ? "-->" : "<!--", offset);
+      if (marker < 0) {
+        if (!comment) text += line.slice(offset);
+        break;
+      }
+      if (!comment) text += line.slice(offset, marker);
+      offset = marker + (comment ? 3 : 4);
+      comment = !comment;
+    }
+    const marker = text.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (marker && !(marker[1][0] === "`" && marker[2].includes("`"))) fence = marker[1];
+    result.push({
+      raw: line,
+      text: fence ? "" : text,
+      code: Boolean(fence),
+      separator: !insideComment && !comment && !fence && line.trim() === "---",
+    });
+  }
+  return result;
+}
+
 function splitSlides(lines) {
   const slides = [];
   let current = [];
-  let fence = null;
-
-  for (const line of lines) {
-    const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
-    if (marker) {
-      if (fence === null) fence = marker[0];
-      else if (marker[0] === fence) fence = null;
-    }
-
-    if (fence === null && line.trim() === "---") {
+  for (const line of scanLines(lines)) {
+    if (line.separator) {
       slides.push(current.join("\n").trim());
       current = [];
     } else {
-      current.push(line);
+      current.push(line.raw);
     }
   }
   slides.push(current.join("\n").trim());
@@ -60,9 +87,6 @@ function splitSlides(lines) {
 
 function visibleText(source) {
   return source
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/~~~[\s\S]*?~~~/g, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
@@ -82,18 +106,25 @@ function countNotes(source) {
 }
 
 function analyzeSlide(source, index) {
-  const heading = source.match(/^\s{0,3}#{1,6}\s+(.+)$/m)?.[1]
-    ?? source.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]
+  const lines = scanLines(source.split("\n"));
+  const structure = lines.filter((line) => !line.code).map((line) => line.text).join("\n");
+  const outsideCode = lines.filter((line) => !line.code).map((line) => line.raw).join("\n");
+  const heading = structure.match(/^\s{0,3}#{1,6}\s+(.+)$/m)?.[1]
+    ?? structure.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]
     ?? "";
-  const classes = [...source.matchAll(/<!--\s*_class:\s*([^>]+?)\s*-->/g)]
+  const classes = [...outsideCode.matchAll(/<!--\s*_class:\s*([^>]+?)\s*-->/g)]
     .flatMap((match) => match[1].trim().split(/\s+/))
     .filter(Boolean);
-  const markdownImages = [...source.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)];
-  const htmlImages = [...source.matchAll(/<img\b[^>]*>/gi)];
-  const text = visibleText(source);
+  const markdownImages = [...structure.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)];
+  const htmlImages = [...structure.matchAll(/<img\b[^>]*>/gi)];
+  const text = [
+    visibleText(structure),
+    lines.filter((line) => line.code).map((line) => line.text).join("\n"),
+  ].join(" ").replace(/\s+/g, " ").trim();
   const words = text ? text.split(/\s+/).length : 0;
-  const bullets = [...source.matchAll(/^\s*(?:[-+*]|\d+\.)\s+\S/gm)].length;
-  const mermaid = [...source.matchAll(/```mermaid\b|class=["'][^"']*\bmermaid\b/gi)].length;
+  const bullets = [...structure.matchAll(/^\s*(?:[-+*]|\d+\.)\s+\S/gm)].length;
+  const mermaid = [...structure.matchAll(/class=["'][^"']*\bmermaid\b/gi)].length +
+    lines.filter((line) => line.code && /^ {0,3}(?:`{3,}|~{3,})mermaid\b/i.test(line.raw)).length;
   const warnings = [];
 
   if (!text && markdownImages.length + htmlImages.length === 0) warnings.push("empty slide");
@@ -109,7 +140,7 @@ function analyzeSlide(source, index) {
     words,
     bullets,
     images: markdownImages.length + htmlImages.length,
-    notes: countNotes(source),
+    notes: countNotes(outsideCode),
     mermaid,
     warnings,
   };
@@ -157,11 +188,13 @@ function printReport(deck, report) {
 
 function main(argv) {
   const json = argv.includes("--json");
-  const positional = argv.filter((arg) => !arg.startsWith("--"));
+  const positional = argv.filter((arg) => arg !== "--json");
   if (argv.includes("-h") || argv.includes("--help")) {
     console.log(HELP);
     return 0;
   }
+  const unknown = positional.find((arg) => arg.startsWith("-"));
+  if (unknown) throw new Error(`Unknown option: ${unknown}`);
   if (positional.length !== 1) {
     console.error(HELP);
     return 2;
@@ -174,8 +207,7 @@ function main(argv) {
   return 0;
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-if (isMain) {
+if (import.meta.main) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (error) {

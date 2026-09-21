@@ -6,7 +6,7 @@ or thumbnail provenance.
 ## Install
 
 ```sh
-npx skills add jongio/skills --skill create-skill -g --agent github-copilot
+npx skills add codebytes/skills --skill create-skill
 ```
 
 Reload skills, then invoke:
@@ -32,6 +32,8 @@ Fixture mode is noninteractive and accepts the documented version 1 payload in
 - Managed `skills-repo.config.json` paths are authoritative.
 - Existing repository conventions are discovered and ambiguous registration fails closed.
 - Every mutation has a zero-write dry-run. Art actions use a persisted single-use approval token.
+- Repositories with a canonical `.waza.yaml` receive separate root mock trigger
+  scaffolds without overwriting authored evaluation tasks.
 - Azure OpenAI and OpenAI use exact origins, disabled redirects, and zero retries.
 - Custom art may use any approved provider and delivery workflow.
 - Every image passes complete PNG, CRC, raster, metadata, dimension, and size validation.
@@ -39,6 +41,10 @@ Fixture mode is noninteractive and accepts the documented version 1 payload in
 - Prompt and non-secret provenance are recorded when the repository supports that surface.
 
 ## Development
+
+Run these commands inside the installed `create-skill` directory. Node.js
+22.20 or newer is required. `check`, previews, and placeholder generation need
+only Node; network image providers need the locked SDK dependencies.
 
 ```sh
 npm ci --ignore-scripts

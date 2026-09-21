@@ -7,7 +7,7 @@
 - Then run `node .skills-repo/sync.mjs --dry-run` and apply with
   `--approve <hash-from-preview>`.
   This local compatibility sync owns the Codex marketplace and the README's
-  installation/update sections; edit `.skills-repo/templates/install.md`, not
+  installation/update/validation sections; edit `.skills-repo/templates/install.md`, not
   those generated sections. Use `--check` to detect stale generated views.
 - Keep every skill self-contained with instructions, README, license,
   deterministic tests, capability eval, thumbnail, and optional scripts,

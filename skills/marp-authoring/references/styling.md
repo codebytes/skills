@@ -8,7 +8,7 @@
 4. Keep inline styles limited to a small adjustment that cannot be expressed by
    an existing class.
 
-Common portable directives:
+Common directive syntax (class names still depend on the active theme):
 
 ```markdown
 <!-- _class: lead -->

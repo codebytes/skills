@@ -50,8 +50,7 @@ their content.
 python3 <skill-directory>/scripts/extract_pptx_theme.py \
   ConferenceTemplate.potx \
   --theme-name conference \
-  --output-dir slides/themes \
-  --css-import https://cdn.example.com/existing-icons.css
+  --output-dir slides/themes
 ```
 
 Outputs:
@@ -100,6 +99,8 @@ python3 <skill-directory>/scripts/apply_marp_theme.py \
 The application script changes only top-level Marp frontmatter. It also reports
 slide classes that are not defined by the generated theme and missing local
 assets referenced by the CSS.
+It preserves the slide body and line endings, and validates every requested deck
+before writing any of them. Python 3.10+ is required for both scripts.
 
 ## Safety
 
@@ -118,7 +119,8 @@ assets referenced by the CSS.
 ## Exit Criteria
 
 - The theme report records source hash, colors, fonts, dimensions, media, and limitations.
-- The generated CSS is valid Marp theme CSS and uses relative asset paths.
+- The generated CSS is valid Marp theme CSS and uses embedded data URIs or
+  reviewed relative asset paths.
 - Logo candidates and extracted media have been visually reviewed.
 - Font substitutions and licensing decisions are documented.
 - The sample deck renders in HTML and PDF.

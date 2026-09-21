@@ -243,6 +243,7 @@ test("bare Node check path does not require image SDK installation", () => {
       { cwd: repository, encoding: "utf8" },
     );
     assert.equal(result.status, 2);
+    assert.equal(JSON.parse(result.stdout).ok, false);
     assert.doesNotMatch(result.stderr, /ERR_MODULE_NOT_FOUND/);
   } finally {
     rmSync(work, { recursive: true, force: true });
@@ -257,13 +258,23 @@ test("fixture parser validates the stable version 1 contract", () => {
   assert.deepEqual(parsed.commands, ["check"]);
   assert.throws(() => parseFixture({ ...fixturePayload, schemaVersion: 2 }), /schemaVersion 1/);
   assert.throws(() => parseFixture({ ...fixturePayload, extra: true }), /unsupported fields/);
+  for (const group of ["routing", "behavior", "thumbnail"]) {
+    assert.throws(
+      () => parseFixture({ ...fixturePayload, [group]: { ...fixturePayload[group], extra: true } }),
+      /unsupported fields/,
+    );
+  }
   assert.throws(
     () => parseFixture({ ...fixturePayload, thumbnail: { provider: "openai", prompt: "valid prompt" } }),
     /must be builtin/,
   );
   assert.throws(
     () => parseFixture({ ...fixturePayload, behavior: { ...fixturePayload.behavior, commands: ["Bad"] } }),
-    /Skill name/,
+    /Commands/,
+  );
+  assert.deepEqual(
+    parseFixture({ ...fixturePayload, behavior: { ...fixturePayload.behavior, commands: ["test"] } }).commands,
+    ["test"],
   );
 });
 

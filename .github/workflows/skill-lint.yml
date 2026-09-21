@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - "skills/**"
+      - "site/src/content/skills/**"
+      - "site/public/images/**"
+      - "**/*.md"
+      - "skills-repo.config.json"
       - "test/**"
       - ".github/tools/vally/**"
       - ".github/workflows/**"
@@ -18,6 +22,10 @@ on:
     branches: [main]
     paths:
       - "skills/**"
+      - "site/src/content/skills/**"
+      - "site/public/images/**"
+      - "**/*.md"
+      - "skills-repo.config.json"
       - "test/**"
       - ".github/tools/vally/**"
       - ".github/workflows/**"
@@ -87,7 +95,8 @@ jobs:
           set -euo pipefail
           while IFS= read -r dir; do
             [ -z "$dir" ] && continue
-            vally lint "$dir"
+            [ -f "$dir/SKILL.md" ] || continue
+            vally lint "$dir" --strict
             if [ -f "$dir/package.json" ]; then
               npm ci --prefix "$dir" --ignore-scripts
               npm test --prefix "$dir"

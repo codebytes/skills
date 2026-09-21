@@ -20,13 +20,16 @@
  *   node <skill-directory>/scripts/make-drawio-svg.mjs build spec.json -o slides/img/flow.drawio.svg
  *   node <skill-directory>/scripts/make-drawio-svg.mjs extract slides/img/flow.drawio.svg
  *
- * Spec format (see example.spec.json in this folder):
+ * Spec format (see ../assets/example.spec.json):
  *   {
+ *     "title": "Example flow",
  *     "nodes": [
  *       { "id": "a", "label": "Start", "x": 40, "y": 40,
  *         "width": 140, "height": 60,
  *         "fill": "#dae8fc", "stroke": "#6c8ebf", "fontColor": "#000000",
- *         "rounded": true }
+ *         "shape": "rounded" },
+ *       { "id": "b", "label": "Finish", "x": 240, "y": 40,
+ *         "width": 140, "height": 60 }
  *     ],
  *     "edges": [
  *       { "source": "a", "target": "b", "label": "yes" }
@@ -36,11 +39,13 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 // ---------- shared helpers ----------
 
 function xmlEscape(s) {
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(String(s))) {
+    throw new Error('XML text contains forbidden control characters.');
+  }
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -56,11 +61,10 @@ function attrEscape(s) {
 }
 
 function finiteNumber(value, label, { min = -Infinity, max = Infinity } = {}) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
     throw new Error(`${label} must be a finite number between ${min} and ${max}.`);
   }
-  return parsed;
+  return value;
 }
 
 function color(value, fallback, label, allowTransparent = false) {
@@ -96,6 +100,13 @@ export function validateSpec(input) {
   if (input.title.length > 200) throw new Error('Spec title must be 200 characters or fewer.');
   if (!Array.isArray(input.nodes) || input.nodes.length === 0) {
     throw new Error('Spec must contain a non-empty "nodes" array.');
+  }
+  if (input.description !== undefined &&
+      (typeof input.description !== 'string' || input.description.length > 500)) {
+    throw new Error('Spec description must be a string of 500 characters or fewer.');
+  }
+  if (input.edges !== undefined && !Array.isArray(input.edges)) {
+    throw new Error('Spec edges must be an array.');
   }
 
   const ids = new Set(['0', '1']);
@@ -152,8 +163,8 @@ export function validateSpec(input) {
     if (source === target) throw new Error(`Edge "${id}" self-links are not supported by this helper.`);
     const label = edge.label === undefined ? '' : String(edge.label);
     if (label.length > 200) throw new Error(`Edge "${id}" label must be 200 characters or fewer.`);
-    if (typeof input.description === 'string' && input.description.length > 500) {
-      throw new Error('Spec description must be 500 characters or fewer.');
+    if (edge.endArrow !== undefined && !['none', 'block'].includes(edge.endArrow)) {
+      throw new Error(`Edge "${id}" endArrow must be "none" or "block".`);
     }
     return {
       id,
@@ -189,7 +200,11 @@ function borderPoint(rect, towardX, towardY) {
   const hh = rect.height / 2;
   const sx = dx !== 0 ? hw / Math.abs(dx) : Infinity;
   const sy = dy !== 0 ? hh / Math.abs(dy) : Infinity;
-  const s = Math.min(sx, sy);
+  const s = rect.shape === 'ellipse'
+    ? 1 / Math.hypot(dx / hw, dy / hh)
+    : rect.shape === 'diamond'
+      ? 1 / (Math.abs(dx) / hw + Math.abs(dy) / hh)
+      : Math.min(sx, sy);
   return { x: cx + dx * s, y: cy + dy * s };
 }
 
@@ -217,7 +232,7 @@ function buildModel(spec, width, height) {
   const cells = ['<mxCell id="0" />', '<mxCell id="1" parent="0" />'];
   for (const n of spec.nodes) {
     cells.push(
-      `<mxCell id="${xmlEscape(n.id)}" value="${attrEscape(n.label ?? '')}" ` +
+      `<mxCell id="${xmlEscape(n.id)}" value="${attrEscape(xmlEscape(n.label).replace(/\n/g, '<br>'))}" ` +
       `style="${xmlEscape(styleFor(n))}" vertex="1" parent="1">` +
       `<mxGeometry x="${n.x}" y="${n.y}" width="${n.width}" height="${n.height}" as="geometry" />` +
       `</mxCell>`
@@ -228,7 +243,7 @@ function buildModel(spec, width, height) {
       ? 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;'
       : 'edgeStyle=none;rounded=0;html=1;';
     cells.push(
-      `<mxCell id="${xmlEscape(e.id)}" value="${attrEscape(e.label)}" ` +
+      `<mxCell id="${xmlEscape(e.id)}" value="${attrEscape(xmlEscape(e.label).replace(/\n/g, '<br>'))}" ` +
       `style="${xmlEscape(edgeStyle + `strokeWidth=${e.strokeWidth};` + (e.dashed ? 'dashed=1;' : '') + (e.endArrow === 'none' ? 'endArrow=none;' : ''))}" edge="1" parent="1" ` +
       `source="${xmlEscape(e.source)}" target="${xmlEscape(e.target)}">` +
       `<mxGeometry relative="1" as="geometry" />` +
@@ -393,26 +408,32 @@ export function build(input) {
 
 // ---------- extract command ----------
 
-function unescapeAttr(s) {
-  return s
-    .replace(/&#10;/g, '\n')
-    .replace(/&#xa;/gi, '\n')
-    .replace(/&apos;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&gt;/g, '>')
-    .replace(/&lt;/g, '<')
-    .replace(/&amp;/g, '&');
+export function decodeXml(s) {
+  if (/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/.test(s)) {
+    throw new Error('Invalid XML entity reference.');
+  }
+  return s.replace(/&(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g, (_, entity) => {
+    const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+    if (Object.hasOwn(named, entity)) return named[entity];
+    const code = entity.startsWith('#x') ? parseInt(entity.slice(2), 16) : Number(entity.slice(1));
+    if (!(code === 9 || code === 10 || code === 13 ||
+          (code >= 32 && code <= 0xd7ff) || (code >= 0xe000 && code <= 0xfffd) ||
+          (code >= 0x10000 && code <= 0x10ffff))) {
+      throw new Error('Invalid XML character reference.');
+    }
+    return String.fromCodePoint(code);
+  });
 }
 
 export function extract(svgText) {
   // Grab the root <svg …> tag and read its content="" attribute.
-  const openTag = svgText.match(/<svg\b[^>]*>/s);
+  const openTag = svgText.match(/<svg\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/s);
   if (!openTag) throw new Error('No <svg> element found.');
-  const m = openTag[0].match(/\scontent="([\s\S]*?)"/);
+  const m = openTag[0].match(/\scontent=(?:"([^"]*)"|'([^']*)')/);
   if (!m) {
     throw new Error('This SVG has no embedded draw.io "content" attribute — it is not an editable .drawio.svg.');
   }
-  return unescapeAttr(m[1]);
+  return decodeXml(m[1] ?? m[2]);
 }
 
 // ---------- CLI ----------
@@ -425,7 +446,10 @@ export function parseArgs(argv) {
   }
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === '-o' || a === '--out') args.out = rest[++i];
+    if (a === '-o' || a === '--out') {
+      if (!rest[i + 1] || rest[i + 1].startsWith('-')) throw new Error(`${a} requires a value`);
+      args.out = rest[++i];
+    }
     else if (a === '-h' || a === '--help') { args.help = true; }
     else if (!a.startsWith('-') && args.input == null) args.input = a;
     else { throw new Error(`Unexpected argument: ${a}`); }
@@ -446,7 +470,8 @@ function main() {
   let args;
   try { args = parseArgs(process.argv.slice(2)); }
   catch (e) { console.error(e.message); process.exit(2); }
-  if (args.help || !args.input) { console.log(HELP); process.exit(args.input ? 0 : 2); }
+  if (args.help) { console.log(HELP); return; }
+  if (!args.input) { console.error(HELP); process.exitCode = 2; return; }
 
   try {
     if (args.cmd === 'extract') {
@@ -471,5 +496,4 @@ function main() {
   }
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-if (isMain) main();
+if (import.meta.main) main();

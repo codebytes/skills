@@ -2,23 +2,26 @@
 
 Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Gemini CLI, and other Agent Skills compatible hosts.
 
-This Astro starter is a searchable catalog for reusable agent skills. It includes:
+This Astro site is the searchable catalog for the canonical skills in `../skills/`. It includes:
 
-- Astro content collections with example skill entries
+- Astro content collections with registered skill entries
 - Responsive grid and list views with persisted preferences
 - Live search and detail pages
 - Copy controls for install commands
 - Light and dark themes
 - Base-path-safe links for project and user GitHub Pages sites
 - A least-privilege, SHA-pinned GitHub Pages workflow
-- Placeholder thumbnails that are ready to replace
+- Thumbnails kept byte-identical to their canonical skill copies
 
 ## Customize
 
-1. Edit or remove the examples in `src/content/skills/`.
-2. Add thumbnail files under `public/images/`.
-3. Update each entry's `thumb`, `repoPath`, install commands, and descriptive content.
-4. Replace `public/images/og.svg` and `public/favicon.svg` with your own artwork.
+1. Add skills with the bundled `create-skill` workflow in the repository root.
+2. Run the repository's managed sync lifecycle after adding or removing skills.
+3. Keep catalog metadata under `src/content/skills/` aligned with canonical skill
+   names, install commands, and source paths.
+4. Keep `public/images/thumb-<name>.png` identical to the skill's `thumbnail.png`.
+5. Edit layouts, components, `public/images/og.svg`, and `public/favicon.svg` for
+   site-level presentation changes.
 
 The content schema is in `src/content.config.ts`.
 
@@ -27,7 +30,7 @@ The content schema is in `src/content.config.ts`.
 Requires Node.js 24 or later and npm 11.10 or later.
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run dev
 ```
 
@@ -38,7 +41,8 @@ npm run build
 npm run preview
 ```
 
-The generated site uses `/skills/` and deploys to https://codebytes.github.io/skills/.
+The configured canonical site is <https://chris-ayers.com/skills/>. The
+`codebytes.github.io/skills/` Pages address may redirect to that custom domain.
 
 ## Catalog identity
 
@@ -50,7 +54,7 @@ The generated site uses `/skills/` and deploys to https://codebytes.github.io/sk
 
 ## Deploy
 
-1. Push the generated project to `codebytes/skills`.
+1. Review and approve publication before pushing to `codebytes/skills`.
 2. In repository settings, set Pages source to **GitHub Actions**.
 3. Push to `main` or run the workflow manually on that branch.
 

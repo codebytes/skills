@@ -68,3 +68,34 @@ test("skill bundles the authoring reference set", async () => {
     assert.ok((await readFile(new URL(relative, import.meta.url), "utf8")).length > 0);
   }
 });
+
+test("deck inspection respects fence lengths and separators inside speaker notes", () => {
+  const report = inspectDeck([
+    "# Visible heading", "",
+    "<!--", "# Hidden heading", "---", "![Hidden image](missing.svg)", "-->",
+    "````markdown", "```", "---", "# Code example", "```", "````",
+    "---", "# Next slide",
+  ].join("\n"));
+  assert.equal(report.summary.slides, 2);
+  assert.equal(report.slides[0].title, "Visible heading");
+  assert.equal(report.slides[0].images, 0);
+  assert.equal(report.slides[0].notes, 1);
+  assert.equal(report.slides[1].title, "Next slide");
+});
+
+test("code-only slides contain visible text, not notes or images", () => {
+  const report = inspectDeck("```markdown\n<!-- Example -->\n![Sample](x.svg)\n- example\n```");
+  assert.equal(report.slides[0].title, "(untitled)");
+  assert.equal(report.slides[0].notes, 0);
+  assert.equal(report.slides[0].images, 0);
+  assert.equal(report.slides[0].bullets, 0);
+  assert.ok(report.slides[0].words > 0);
+  assert.ok(!report.slides[0].warnings.includes("empty slide"));
+  assert.ok(!inspectDeck("```xml\n<element />\n```").slides[0].warnings.includes("empty slide"));
+});
+
+test("the starter deck uses a built-in theme and has no missing external assets", async () => {
+  const source = await readFile(new URL("../assets/deck-template.md", import.meta.url), "utf8");
+  assert.match(inspectDeck(source).frontmatter, /^theme: default$/m);
+  assert.doesNotMatch(source, /!\[.*?\]\(img\/|_class: columns/);
+});

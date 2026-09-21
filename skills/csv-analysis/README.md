@@ -18,6 +18,8 @@ deterministic analysis of larger files.
 
 ## Development
 
+Run these commands inside the installed skill directory with Node.js 22.20+.
+
 ```sh
 npm ci --ignore-scripts
 npm test

@@ -26,7 +26,11 @@ Old installation instructions.
 
 ## Validation
 
-Keep this validation section.
+Old validation instructions.
+
+## Catalog
+
+Keep this catalog section.
 `);
   write(join(directory, marketplacePath), JSON.stringify({
     name: "octocat-skills",
@@ -70,7 +74,9 @@ test("approved sync is idempotent and preserves the table and unrelated managed 
   applyPlan(plan, { approval: plan.hash });
   const readme = read(directory, "README.md");
   assert.equal(readme.split("\n## Install\n")[0], previousReadme.split("\n## Install\n")[0]);
-  assert.equal(readme.split("\n## Validation\n")[1], previousReadme.split("\n## Validation\n")[1]);
+  assert.equal(readme.split("\n## Catalog\n")[1], previousReadme.split("\n## Catalog\n")[1]);
+  assert.match(readme, /skills\/create-skill\/evals\/create-skill\/eval\.yaml/);
+  assert.match(readme, /gh workflow run skill-eval.yml --repo octocat\/skills --ref main/);
   assert.match(readme, /copilot plugin update octocat-skills@octocat-skills/);
   assert.match(readme, /codex plugin marketplace upgrade octocat-skills/);
   assert.doesNotMatch(readme, /\{\{[^}]+\}\}/);

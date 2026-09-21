@@ -100,3 +100,10 @@ test("renderer creates the complete portable skill shape", () => {
   assert.match(withRepository.get("README.md"), /npx skills add octocat\/skills/);
   assert.doesNotMatch(withRepository.get("README.md"), /OWNER\/REPOSITORY/);
 });
+
+test("short valid titles and author names are preserved", () => {
+  const short = createSkillManifest({ ...manifest, title: "Notes", author: "Ada" });
+  assert.equal(short.title, "Notes");
+  assert.equal(short.author, "Ada");
+  assert.throws(() => createSkillManifest({ ...manifest, commands: ["a".repeat(65)] }), /Commands/);
+});

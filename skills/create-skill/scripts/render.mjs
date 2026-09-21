@@ -23,11 +23,11 @@ export function titleizeSkillName(name) {
     .join(" ");
 }
 
-function cleanText(value, label, maxLength) {
+function cleanText(value, label, maxLength, minLength = 10) {
   if (typeof value !== "string") throw new Error(`${label} is required`);
   const text = value.trim().replace(/\s+/g, " ");
-  if (text.length < 10 || text.length > maxLength) {
-    throw new Error(`${label} must contain 10 to ${maxLength} characters`);
+  if (text.length < minLength || text.length > maxLength) {
+    throw new Error(`${label} must contain ${minLength} to ${maxLength} characters`);
   }
   if (/[\u0000-\u001f\u007f\u2013\u2014]/.test(text)) {
     throw new Error(`${label} contains a forbidden control or dash character`);
@@ -40,13 +40,13 @@ export function createSkillManifest(input) {
   const summary = cleanText(input?.summary, "Summary", 240);
   const useFor = cleanText(input?.useFor, "USE FOR text", 320);
   const doNotUseFor = cleanText(input?.doNotUseFor, "DO NOT USE FOR text", 320);
-  const author = cleanText(input?.author ?? "Repository contributors", "Author", 100);
+  const author = cleanText(input?.author ?? "Repository contributors", "Author", 100, 2);
   const type = input?.type ?? "workflow";
   if (!new Set(["workflow", "analysis", "utility"]).has(type)) {
     throw new Error("Skill type must be workflow, analysis, or utility");
   }
   const title = input?.title
-    ? cleanText(input.title, "Title", 100)
+    ? cleanText(input.title, "Title", 100, 2)
     : titleizeSkillName(name);
   const purpose = input?.purpose
     ? cleanText(input.purpose, "Purpose", 320)
@@ -54,7 +54,7 @@ export function createSkillManifest(input) {
   const commands = input?.commands ?? [];
   if (
     !Array.isArray(commands) ||
-    commands.some((command) => typeof command !== "string" || !SKILL_NAME_PATTERN.test(command))
+    commands.some((command) => typeof command !== "string" || command.length > 64 || !SKILL_NAME_PATTERN.test(command))
   ) {
     throw new Error("Commands must be lowercase-dash identifiers");
   }
@@ -155,6 +155,8 @@ ${install}
 Reload your agent skills, then invoke \`/${manifest.name}\`.
 
 ## Development
+
+Run these commands inside the installed skill directory with Node.js 22.20+.
 
 \`\`\`sh
 npm ci --ignore-scripts
@@ -260,8 +262,9 @@ defaults:
 
 scoring:
   weights:
-    prompt: 0.8
-    skill-invocation: 0.2
+    prompt: 0.7
+    skill-invocation: 0.15
+    diff-empty: 0.15
   threshold: 0.8
 
 stimuli:
@@ -290,6 +293,7 @@ stimuli:
       - type: skill-invocation
         config:
           required: [${manifest.name}]
+      - type: diff-empty
 `;
 }
 
@@ -309,5 +313,45 @@ export function renderSkillFiles(manifest, options = {}) {
     ["thumbnail.png", options.thumbnail ?? encodeDeterministicPlaceholderPng()],
   ]);
   if (lockfile) files.set("package-lock.json", lockfile);
+  return files;
+}
+
+export function renderWazaFiles(manifest, skillPath) {
+  if (!manifest.doNotUseFor) throw new Error("Waza registration requires DO NOT USE FOR boundaries");
+  const files = new Map([["eval.yaml", `name: ${manifest.name}-eval
+description: Deterministic trigger coverage for ${manifest.name}.
+skill: ${manifest.name}
+version: "1.0"
+config:
+  trials_per_task: 1
+  timeout_seconds: 30
+  parallel: false
+  executor: mock
+  model: mock-model
+tasks:
+  - "tasks/*.yaml"
+`]]);
+  const tasks = [
+    ["positive-trigger-1", manifest.description, manifest.summary, "positive", 0.6],
+    ["positive-trigger-2", manifest.useFor, `Use ${manifest.name}: ${manifest.useFor}`, "positive", 0.6],
+    ["negative-trigger-1", `DO NOT USE FOR: ${manifest.doNotUseFor}`, manifest.doNotUseFor, "negative", 0.9],
+  ];
+  for (const [id, description, prompt, mode, threshold] of tasks) {
+    files.set(`tasks/${id}.yaml`, `id: ${id}
+name: ${id}
+description: ${JSON.stringify(description)}
+inputs:
+  prompt: ${JSON.stringify(prompt)}
+expected:
+  should_trigger: ${mode === "positive"}
+graders:
+  - type: trigger
+    name: ${id}
+    config:
+      skill_path: ${skillPath}
+      mode: ${mode}
+      threshold: ${threshold}
+`);
+  }
   return files;
 }

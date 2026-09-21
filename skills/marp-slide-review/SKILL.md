@@ -39,6 +39,8 @@ node <skill-directory>/scripts/render-review.mjs \
 
 The render command prints the gallery path and writes a JSON manifest listing
 the generated slides, PDF, and warnings.
+For a trusted deck that needs embedded HTML, add `--html` explicitly to either
+command. HTML is not enabled by default.
 
 ## Safety
 
@@ -78,12 +80,17 @@ system browser exists:
 
 ```bash
 npm ci --ignore-scripts
-npx playwright install chromium
 ```
 
+Run installation commands inside this skill directory with Node.js 22.20+.
+When a browser is missing, `npx playwright install chromium` supplies it for
+the overflow checker. Marp CLI uses its own browser discovery; set `CHROME_PATH`
+to the executable if PNG/PDF export cannot find that browser.
+
 The skill pins Marp CLI and Playwright in `package-lock.json`.
-`check-overflow.mjs` supports `MARP_CMD` when intentionally using another
-reviewed installation; `render-review.mjs` uses the pinned package.
+Both helpers support `MARP_CMD` as one reviewed executable or JavaScript file
+path, not a shell command with arguments. Missing dependencies produce an error
+rather than an implicit package download.
 
 ## Overflow options
 
@@ -106,6 +113,7 @@ node <skill-directory>/scripts/check-overflow.mjs \
 | `--threshold <px>` | Overflow tolerance in pixels; default `2` |
 | `--wait <ms>` | Delay for fonts and client-side rendering; default `600` |
 | `--allow-local-files` | Permit local images during Marp rendering |
+| `--html` | Enable embedded HTML for a trusted deck |
 | `--json` | Emit machine-readable JSON |
 | `--keep-html` | Retain rendered HTML for debugging |
 
@@ -114,6 +122,9 @@ Exit codes:
 - `0`: no overflow.
 - `1`: one or more slides overflow.
 - `2`: usage or tooling error.
+
+Threshold and wait values must be finite and non-negative. A rendered document
+with no Marp slide sections is a tooling error, never a passing overflow result.
 
 ## Fixing overflow
 

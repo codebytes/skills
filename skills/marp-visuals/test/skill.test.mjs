@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { renderChart } from "../scripts/chart-to-svg.mjs";
+import { parseArgs as parseChartArgs, renderChart } from "../scripts/chart-to-svg.mjs";
 import { parseArgs as parseMermaidArgs } from "../scripts/render-mermaid.mjs";
 
 const skill = await readFile(new URL("../SKILL.md", import.meta.url), "utf8");
@@ -61,6 +66,27 @@ test("Mermaid wrapper parses deterministic output options", () => {
   );
 });
 
+test("chart data cannot silently coerce missing or nonnumeric values to zero", () => {
+  const spec = (value) => ({
+    type: "bar", title: "Observed values",
+    series: [{ name: "Series", values: [{ label: "A", value }] }],
+  });
+  for (const value of [null, false, true, "", " ", "12", [], {}, undefined, NaN, Infinity]) {
+    assert.throws(() => renderChart(spec(value)), /finite JSON number/);
+  }
+  assert.doesNotMatch(renderChart(spec(0)), /NaN|Infinity/);
+  assert.doesNotMatch(renderChart(spec(-12)), /NaN|Infinity/);
+  assert.throws(() => renderChart(spec(Number.MIN_VALUE)), /numeric range/);
+  assert.throws(() => renderChart(spec(Number.MAX_VALUE)), /numeric range/);
+});
+
+test("visual CLIs require option values", () => {
+  assert.throws(() => parseChartArgs(["chart.json", "-o"]), /requires a value/);
+  for (const flag of ["-o", "--theme", "--background", "--width", "--height", "--scale"]) {
+    assert.throws(() => parseMermaidArgs(["flow.mmd", flag]), /requires a value/);
+  }
+});
+
 test("skill bundles visual design references", async () => {
   for (const relative of [
     "../assets/example-chart.json",
@@ -74,4 +100,28 @@ test("skill bundles visual design references", async () => {
   ]) {
     assert.ok((await readFile(new URL(relative, import.meta.url), "utf8")).length > 0);
   }
+});
+
+test("Mermaid rendering preserves prior output when conversion or accessibility validation fails", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "mermaid-output-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const input = join(directory, "flow.mmd");
+  const output = join(directory, "flow.svg");
+  const cli = join(directory, "stub.mjs");
+  writeFileSync(input, "flowchart LR\naccTitle: Flow\naccDescr: A goes to B.\nA --> B\n");
+  writeFileSync(output, "previous valid output");
+  writeFileSync(cli, `
+import { writeFileSync } from "node:fs";
+const output = process.argv[process.argv.indexOf("-o") + 1];
+writeFileSync(output, "<svg>no accessibility metadata</svg>");
+`);
+  const result = spawnSync(
+    process.execPath,
+    [fileURLToPath(new URL("../scripts/render-mermaid.mjs", import.meta.url)), input, "-o", output],
+    { encoding: "utf8", env: { ...process.env, MERMAID_CLI_PATH: cli } },
+  );
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /accessible title and description/);
+  assert.equal(readFileSync(output, "utf8"), "previous valid output");
+  assert.ok(!readdirSync(directory).some((file) => file.startsWith(".mermaid-render-")));
 });

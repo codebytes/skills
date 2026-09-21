@@ -15,6 +15,11 @@ It does not rewrite:
 - Image references
 - Custom HTML
 
+The slide body, UTF-8 BOM when present, and line endings are preserved.
+Quoted scalar keys and folded/literal theme values are supported; duplicate
+keys, non-scalar theme values, and multiline quoted values are rejected. All supplied decks are parsed
+before any writes begin, so a malformed later deck does not update earlier ones.
+
 Always run without `--write` first. Review:
 
 - Previous and proposed theme names

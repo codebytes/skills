@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import { discoverRepository } from "./repository.mjs";
 import { createSkillManifest, validateSkillName } from "./render.mjs";
 import {
@@ -105,6 +104,18 @@ export function parseFixture(value) {
   ]);
   const unknown = Object.keys(value).filter((key) => !expected.has(key));
   if (unknown.length > 0) throw new Error(`Fixture has unsupported fields: ${unknown.join(", ")}`);
+  for (const [group, keys] of Object.entries({
+    routing: ["type", "useFor", "doNotUseFor"],
+    behavior: ["purpose", "commands"],
+    thumbnail: ["provider", "prompt"],
+  })) {
+    const object = value[group];
+    if (!object || typeof object !== "object" || Array.isArray(object)) {
+      throw new Error(`Fixture ${group} must be an object`);
+    }
+    const extra = Object.keys(object).filter((key) => !keys.includes(key));
+    if (extra.length) throw new Error(`Fixture ${group} has unsupported fields: ${extra.join(", ")}`);
+  }
   validateSkillName(value.name);
   const type = value.routing?.type;
   if (!new Set(["workflow", "analysis", "utility"]).has(type)) {
@@ -117,7 +128,6 @@ export function parseFixture(value) {
     return items.map((item) => fixtureText(item, label));
   };
   const commands = stringList(value.behavior?.commands, "behavior.commands");
-  for (const command of commands) validateSkillName(command);
   if (value.thumbnail?.provider !== "builtin") {
     throw new Error("Fixture thumbnail.provider must be builtin for deterministic generation");
   }
@@ -193,7 +203,8 @@ export function manifestFromExistingSkill(profile, name) {
     .trim();
   const useFor = description.match(/\bUSE FOR:\s*(.*?)(?:\s+DO NOT USE FOR:|$)/i)?.[1]?.trim()
     ?? `Use ${name}`;
-  return Object.freeze({ name, summary, useFor, version: "1.0.0" });
+  const doNotUseFor = description.match(/\bDO NOT USE FOR:\s*(.*)$/i)?.[1]?.trim();
+  return Object.freeze({ name, summary, useFor, doNotUseFor, description, version: "1.0.0" });
 }
 
 function targetPaths(profile, name) {
@@ -344,10 +355,7 @@ export async function run(argv, context = {}) {
   return 0;
 }
 
-const isMain =
-  process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
-
-if (isMain) {
+if (import.meta.main) {
   run(process.argv.slice(2))
     .then((code) => {
       process.exitCode = code;

@@ -134,3 +134,26 @@ test("Gemini uses its native manifest and implicit root skills directory", async
   );
   assert.ok((await skillDirectories(await packagePath("./skills"))).length > 0);
 });
+
+test("Cursor marketplace resolves the portable package without a duplicate native manifest", async () => {
+  const marketplace = await readJson(".cursor-plugin/marketplace.json");
+  const plugin = await readJson("plugin.json");
+  assert.equal(marketplace.name, plugin.name);
+  assert.equal(typeof marketplace.owner.name, "string");
+  assert.equal(marketplace.plugins.length, 1);
+  assert.equal(marketplace.plugins[0].name, plugin.name);
+  assert.equal(await packagePath(marketplace.plugins[0].source), await realpath(root));
+});
+
+test("Codex marketplace declares the root-local source and supported policy values", async () => {
+  const marketplace = await readJson(".agents/plugins/marketplace.json");
+  const plugin = await readJson(".codex-plugin/plugin.json");
+  assert.equal(marketplace.name, plugin.name);
+  assert.equal(marketplace.plugins.length, 1);
+  const entry = marketplace.plugins[0];
+  assert.equal(entry.name, plugin.name);
+  assert.equal(entry.source.source, "local");
+  assert.equal(await packagePath(entry.source.path), await realpath(root));
+  assert.equal(entry.policy.installation, "AVAILABLE");
+  assert.equal(entry.policy.authentication, "ON_INSTALL");
+});

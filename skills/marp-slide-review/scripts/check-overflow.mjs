@@ -29,13 +29,12 @@
  *   intentionally using another reviewed installation.
  */
 
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve, sep } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const MARP_VERSION = '4.5.0';
 const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const HELP = `Detect content overflow in Marp slides.
@@ -47,41 +46,59 @@ Options:
   --threshold <px>    Overflow tolerance in pixels (default: 2)
   --wait <ms>         Settle delay for fonts/CDN CSS (default: 600)
   --allow-local-files Pass --allow-local-files to Marp (local images)
+  --html             Enable embedded HTML only for a trusted deck
   --json              Emit JSON instead of a table
   --keep-html         Keep the rendered HTML and print its path
   -h, --help          Show this help
 
 Exit code: 0 = no overflow, 1 = overflow found, 2 = usage/tooling error.`;
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const opts = {
     themeSet: null,
     threshold: 2,
     wait: 600,
     allowLocalFiles: false,
+    html: false,
     json: false,
     keepHtml: false,
     decks: [],
+    help: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '-h' || a === '--help') { console.log(HELP); process.exit(0); }
+    if (['--theme-set', '--threshold', '--wait'].includes(a) &&
+        (argv[i + 1] === undefined || argv[i + 1].startsWith('--') || !argv[i + 1].trim())) {
+      throw new Error(`${a} requires a value`);
+    }
+    if (a === '-h' || a === '--help') opts.help = true;
     else if (a === '--theme-set') opts.themeSet = argv[++i];
     else if (a === '--threshold') opts.threshold = Number(argv[++i]);
     else if (a === '--wait') opts.wait = Number(argv[++i]);
     else if (a === '--allow-local-files') opts.allowLocalFiles = true;
+    else if (a === '--html') opts.html = true;
     else if (a === '--json') opts.json = true;
     else if (a === '--keep-html') opts.keepHtml = true;
-    else if (a.startsWith('--')) { console.error(`Unknown option: ${a}`); process.exit(2); }
+    else if (a.startsWith('-')) throw new Error(`Unknown option: ${a}`);
     else opts.decks.push(a);
+  }
+  for (const key of ['threshold', 'wait']) {
+    if (!Number.isFinite(opts[key]) || opts[key] < 0) {
+      throw new Error(`--${key} must be a finite non-negative number`);
+    }
   }
   return opts;
 }
 
 async function loadChromium() {
+  let chromium;
   try {
-    const { chromium } = await import('playwright');
-    const candidates = [
+    ({ chromium } = await import('playwright'));
+  } catch (error) {
+    if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
+    throw new Error('Playwright is not installed. Run npm ci --ignore-scripts in the skill directory.', { cause: error });
+  }
+  const candidates = [
       process.env.CHROME_PATH,
       process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -91,23 +108,20 @@ async function loadChromium() {
       '/usr/bin/chromium',
       '/usr/bin/chromium-browser',
       '/usr/bin/microsoft-edge',
-    ].filter(Boolean);
-    return {
-      chromium,
-      executablePath: candidates.find((candidate) => existsSync(candidate)) ?? null,
-    };
-  } catch {
-    console.error(
-      'Playwright is not installed. Install it with:\n' +
-      '  npm i -D playwright && npx playwright install chromium'
-    );
-    process.exit(2);
-  }
+  ].filter(Boolean);
+  return {
+    chromium,
+    executablePath: candidates.find((candidate) => existsSync(candidate)) ?? null,
+  };
 }
 
 function renderDeck(deck, tmpDir, opts) {
   const outHtml = join(tmpDir, 'deck.html');
-  const args = ['--no-stdin', '--html', '--template', 'bare'];
+  const args = [
+    '--no-stdin', '--template', 'bare',
+    opts.html ? '--html' : '--no-html',
+    '--base-url', pathToFileURL(`${dirname(resolve(deck))}${sep}`).href,
+  ];
   if (opts.themeSet) args.push('--theme-set', opts.themeSet);
   if (opts.allowLocalFiles) args.push('--allow-local-files');
   args.push('-o', outHtml, '--', deck);
@@ -115,16 +129,18 @@ function renderDeck(deck, tmpDir, opts) {
     runMarp(args);
   } catch (err) {
     const detail = (err.stderr || '').toString().trim();
-    console.error(`Marp render failed for ${deck}` + (detail ? `:\n${detail}` : ''));
-    process.exit(2);
+    throw new Error(`Marp render failed for ${deck}: ${detail || err.message}`, { cause: err });
   }
   return outHtml;
 }
 
 function runMarp(args) {
   if (process.env.MARP_CMD) {
-    const command = `${process.env.MARP_CMD} ${args.map(quote).join(' ')}`;
-    execSync(command, { stdio: ['ignore', 'ignore', 'pipe'] });
+    const command = process.env.MARP_CMD;
+    const isScript = /\.(?:mjs|cjs|js)$/.test(command);
+    execFileSync(isScript ? process.execPath : command, isScript ? [command, ...args] : args, {
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
     return;
   }
   const localCli = join(SKILL_ROOT, 'node_modules', '@marp-team', 'marp-cli', 'marp-cli.js');
@@ -132,14 +148,26 @@ function runMarp(args) {
     execFileSync(process.execPath, [localCli, ...args], { stdio: ['ignore', 'ignore', 'pipe'] });
     return;
   }
-  const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  execFileSync(npx, ['--yes', `@marp-team/marp-cli@${MARP_VERSION}`, ...args], {
-    stdio: ['ignore', 'ignore', 'pipe'],
-  });
+  throw new Error('Marp CLI is not installed. Run npm ci --ignore-scripts in the skill directory.');
 }
 
-function quote(p) {
-  return `'${String(p).replace(/'/g, `'\\''`)}'`;
+export function measureDocument(threshold, doc = document) {
+  const slides = [...doc.querySelectorAll('section[id]')].filter((el) => /^\d+$/.test(el.id));
+  if (slides.length === 0) throw new Error('No Marp slides found in rendered HTML.');
+  const rows = [];
+  for (const el of slides) {
+    const overY = el.scrollHeight - el.clientHeight;
+    const overX = el.scrollWidth - el.clientWidth;
+    if (overY <= threshold && overX <= threshold) continue;
+    const heading = el.querySelector('h1, h2, h3, h4');
+    rows.push({
+      slide: Number(el.id),
+      title: (heading ? heading.textContent : '').trim().slice(0, 48),
+      overflowY: Math.max(0, Math.round(overY)),
+      overflowX: Math.max(0, Math.round(overX)),
+    });
+  }
+  return rows.sort((a, b) => a.slide - b.slide);
 }
 
 async function measure(runtime, htmlPath, opts) {
@@ -148,37 +176,24 @@ async function measure(runtime, htmlPath, opts) {
   );
   try {
     const page = await browser.newPage();
-    await page.goto('file://' + resolve(htmlPath), { waitUntil: 'load' });
+    if (!opts.allowLocalFiles) {
+      await page.route('file://**/*', (route) =>
+        route.request().url() === pathToFileURL(htmlPath).href ? route.continue() : route.abort());
+    }
+    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'load' });
     // Let webfonts (Font Awesome) and any CDN CSS settle so widths are real.
-    await page.evaluate(() => document.fonts && document.fonts.ready).catch(() => {});
+    await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(opts.wait);
-    return await page.evaluate((threshold) => {
-      const rows = [];
-      // Real content slides carry a numeric id; Marpit's split-background helper
-      // sections do not, so `section[id]` isolates the true slides.
-      for (const el of document.querySelectorAll('section[id]')) {
-        const overY = el.scrollHeight - el.clientHeight;
-        const overX = el.scrollWidth - el.clientWidth;
-        const overflow = overY > threshold || overX > threshold;
-        if (!overflow) continue;
-        const heading = el.querySelector('h1, h2, h3, h4');
-        rows.push({
-          slide: Number(el.id),
-          title: (heading ? heading.textContent : '').trim().slice(0, 48),
-          overflowY: Math.max(0, Math.round(overY)),
-          overflowX: Math.max(0, Math.round(overX)),
-        });
-      }
-      return rows.sort((a, b) => a.slide - b.slide);
-    }, opts.threshold);
+    return await page.evaluate(measureDocument, opts.threshold);
   } finally {
     await browser.close();
   }
 }
 
-async function main() {
-  const opts = parseArgs(process.argv.slice(2));
-  if (opts.decks.length === 0) { console.error(HELP); process.exit(2); }
+async function main(argv) {
+  const opts = parseArgs(argv);
+  if (opts.help) { console.log(HELP); return 0; }
+  if (opts.decks.length === 0) { console.error(HELP); return 2; }
   if (opts.themeSet == null && existsSync('slides/themes')) opts.themeSet = 'slides/themes';
 
   const chromium = await loadChromium();
@@ -186,7 +201,7 @@ async function main() {
   let hadOverflow = false;
 
   for (const deck of opts.decks) {
-    if (!existsSync(deck)) { console.error(`Deck not found: ${deck}`); process.exit(2); }
+    if (!existsSync(deck)) throw new Error(`Deck not found: ${deck}`);
     const tmpDir = mkdtempSync(join(tmpdir(), 'marp-overflow-'));
     try {
       const html = renderDeck(deck, tmpDir, opts);
@@ -216,7 +231,14 @@ async function main() {
       }
     }
   }
-  process.exit(hadOverflow ? 1 : 0);
+  return hadOverflow ? 1 : 0;
 }
 
-main().catch((err) => { console.error(err?.stack || String(err)); process.exit(2); });
+if (import.meta.main) {
+  try {
+    process.exitCode = await main(process.argv.slice(2));
+  } catch (error) {
+    console.error(`check-overflow: ${error.message}`);
+    process.exitCode = 2;
+  }
+}

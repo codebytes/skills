@@ -19,3 +19,9 @@ cache:
 tokens:
   warningThreshold: 500
   fallbackLimit: 5000
+  limits:
+    defaults:
+      "*.md": 2000
+    overrides:
+      "SKILL.md": 5000
+      "README.md": 3000

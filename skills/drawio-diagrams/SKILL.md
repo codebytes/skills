@@ -77,7 +77,7 @@ For PDF or PPTX export of local files, pass `--allow-local-files` to Marp CLI.
 
 `scripts/make-drawio-svg.mjs` validates and renders a JSON node/edge
 specification to SVG shapes and embeds a matching `mxGraphModel`. It requires
-Node.js but no npm packages.
+Node.js 22.20 or newer but no npm packages.
 
 ```bash
 # Build an editable diagram from a specification
@@ -193,7 +193,7 @@ drawio --export --format svg --embed-diagram diagram.drawio \
 ## Editing an existing diagram
 
 1. Extract the embedded XML:
-   `scripts/make-drawio-svg.mjs extract file.drawio.svg > model.xml`.
+   `node <skill-directory>/scripts/make-drawio-svg.mjs extract file.drawio.svg > model.xml`.
 2. Edit the original JSON specification or the extracted model.
 3. Regenerate or re-export the diagram so the rendered shapes and model remain synchronized.
 4. Open the `.drawio.svg` directly in the Draw.io Integration extension for visual editing.

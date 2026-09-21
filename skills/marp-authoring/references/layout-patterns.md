@@ -3,7 +3,11 @@
 Inspect the active theme before using a class. Never assume a class exists only
 because another Marp repository defines it.
 
-## Portable patterns
+## Layout patterns
+
+`columns`, `columns3`, and `small` are theme-specific examples, not built-in
+Marp layouts. Use them only if the active theme implements them. The bundled
+starter uses the built-in `default` theme and a Markdown comparison table.
 
 | Pattern | Recommended structure |
 |---|---|

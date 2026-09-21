@@ -22,9 +22,14 @@ node scripts/inspect-deck.mjs ../../slides/Slides.md
 node scripts/inspect-deck.mjs --json ../../slides/Slides.md
 ```
 
-Copy `assets/deck-template.md` when starting a new deck.
+Run these commands from the installed skill directory with Node.js 22.20+,
+replacing the example deck paths with your own. Copy `assets/deck-template.md`
+for a standalone starter using Marp's built-in `default` theme; select a
+repository-specific theme only after confirming it exists.
 
 ## Development
+
+Run from this skill's directory:
 
 ```sh
 npm ci --ignore-scripts

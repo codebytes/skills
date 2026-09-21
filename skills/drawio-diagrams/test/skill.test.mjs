@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { build, extract, validateSpec } from "../scripts/make-drawio-svg.mjs";
-import { validateDocument } from "../scripts/validate-drawio.mjs";
+import { parseXml, validateDocument } from "../scripts/validate-drawio.mjs";
 
 const skill = await readFile(new URL("../SKILL.md", import.meta.url), "utf8");
 
@@ -96,4 +96,34 @@ test("bundled examples and references are valid", async () => {
   ]) {
     assert.ok((await readFile(new URL(relative, import.meta.url), "utf8")).length > 0);
   }
+});
+
+test("the XML validator rejects malformed attributes, entities and incomplete SVG", () => {
+  for (const source of ['<x a=no/>', '<x a="1" a="2"/>', '<x>&unknown;</x>', '<x>unclosed', '<x/>trailing']) {
+    assert.throws(() => parseXml(source));
+  }
+  assert.equal(parseXml('<x label="a > b &amp; c"/>').attributes.label, "a > b & c");
+  const svg = build({ title: "One", nodes: [{ id: "a", x: 20, y: 20, width: 100, height: 60 }] });
+  assert.ok(validateDocument(svg.replace("</svg>", "")).errors.length > 0);
+  assert.ok(validateDocument('<mxfile><diagram name="empty"/></mxfile>').errors.length > 0);
+  assert.ok(validateDocument('<mxfile><diagram name="compressed">abc123==</diagram></mxfile>').warnings
+    .some((warning) => warning.includes("not structurally inspected")));
+});
+
+test("diagram specs reject invalid numbers and validate descriptions even without edges", () => {
+  const node = { id: "a", x: 0, y: 0, width: 100, height: 60 };
+  assert.throws(() => validateSpec({ title: "One", nodes: [node], description: "x".repeat(501) }), /description/);
+  assert.throws(() => validateSpec({ title: "One", nodes: [node], edges: {} }), /edges.*array/);
+  assert.throws(() => validateSpec({ title: "One", nodes: [{ ...node, x: null }] }), /finite number/);
+});
+
+test("plain labels stay literal when reopened in draw.io HTML-label mode", () => {
+  const svg = build({
+    title: "Literal text",
+    nodes: [{ id: "a", label: "<b>not markup</b>\nNext", x: 0, y: 0, width: 150, height: 80 }],
+  });
+  const model = extract(svg);
+  const cells = parseXml(model).children[0].children[0].children[0].children;
+  assert.equal(cells[2].attributes.value, "&lt;b&gt;not markup&lt;/b&gt;<br>Next");
+  assert.deepEqual(validateDocument(svg).errors, []);
 });
