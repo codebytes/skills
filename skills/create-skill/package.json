@@ -16,7 +16,7 @@
     "eval": "vally eval --eval-spec evals/create-skill/eval.yaml --skill-dir ."
   },
   "dependencies": {
-    "@azure/identity": "4.13.2",
+    "@azure/identity": "4.13.3",
     "openai": "7.10.0"
   },
   "devDependencies": {
