@@ -6,3 +6,4 @@ build/
 Thumbs.db
 *.log
 .skills-repo/*.tmp
+site/public/images/thumb-*.png

@@ -8,7 +8,9 @@
     "npm": ">=11.10.0"
   },
   "scripts": {
+    "predev": "node scripts/sync-thumbnails.mjs",
     "dev": "astro dev",
+    "prebuild": "node scripts/sync-thumbnails.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"

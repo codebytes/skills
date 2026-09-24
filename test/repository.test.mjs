@@ -9,11 +9,11 @@ import {
   discoverRepository,
   normalizeRepositoryPath,
   validateManagedConfig,
-} from "../scripts/repository.mjs";
+} from "../.skills-repo/lib/repository.mjs";
 import { createRepositoryFixture, write } from "./helpers.mjs";
 
 test("managed repository discovery uses the nearest valid config", () => {
-  const root = mkdtempSync(join(tmpdir(), "create-skill-managed-"));
+  const root = mkdtempSync(join(tmpdir(), "skills-repo-managed-"));
   try {
     createRepositoryFixture(root, { managed: true });
     const nested = join(root, "skills", "existing");
@@ -29,7 +29,7 @@ test("managed repository discovery uses the nearest valid config", () => {
 });
 
 test("managed config mirrors the canonical strict schema and paths", () => {
-  const root = mkdtempSync(join(tmpdir(), "create-skill-config-"));
+  const root = mkdtempSync(join(tmpdir(), "skills-repo-config-"));
   try {
     createRepositoryFixture(root, { managed: true });
     const config = JSON.parse(readFileSync(join(root, CONFIG_FILE), "utf8"));
@@ -71,7 +71,7 @@ test("managed config mirrors the canonical strict schema and paths", () => {
 });
 
 test("existing repository conventions are discovered without guessing", () => {
-  const root = mkdtempSync(join(tmpdir(), "create-skill-existing-"));
+  const root = mkdtempSync(join(tmpdir(), "skills-repo-existing-"));
   try {
     createRepositoryFixture(root);
     const profile = discoverConventions(root);
@@ -84,9 +84,9 @@ test("existing repository conventions are discovered without guessing", () => {
 });
 
 test("discovery fails closed for malformed, missing, or ambiguous repositories", () => {
-  const malformed = mkdtempSync(join(tmpdir(), "create-skill-malformed-"));
-  const empty = mkdtempSync(join(tmpdir(), "create-skill-empty-"));
-  const ambiguous = mkdtempSync(join(tmpdir(), "create-skill-ambiguous-"));
+  const malformed = mkdtempSync(join(tmpdir(), "skills-repo-malformed-"));
+  const empty = mkdtempSync(join(tmpdir(), "skills-repo-empty-"));
+  const ambiguous = mkdtempSync(join(tmpdir(), "skills-repo-ambiguous-"));
   try {
     writeFileSync(join(malformed, CONFIG_FILE), "{");
     assert.throws(() => discoverRepository(malformed), /Cannot parse/);
@@ -117,7 +117,7 @@ test("discovery fails closed for malformed, missing, or ambiguous repositories",
 });
 
 test("repository discovery never crosses the nearest git boundary", () => {
-  const outer = mkdtempSync(join(tmpdir(), "create-skill-boundary-"));
+  const outer = mkdtempSync(join(tmpdir(), "skills-repo-boundary-"));
   const inner = join(outer, "inner");
   try {
     createRepositoryFixture(outer, { managed: true });

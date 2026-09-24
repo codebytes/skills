@@ -4,20 +4,38 @@ on:
   pull_request:
     paths:
       - ".skills-repo/**"
+      - "skills/**"
+      - "site/scripts/**"
       - "skills-repo.config.json"
       - "README.md"
       - ".agents/plugins/marketplace.json"
-      - "skills/create-skill/scripts/**"
+      - ".claude-plugin/**"
+      - ".codex-plugin/**"
+      - ".cursor-plugin/**"
+      - "plugin.json"
+      - "marketplace.json"
+      - "gemini-extension.json"
+      - "LICENSE"
+      - "THIRD-PARTY-NOTICES.md"
       - "test/**"
       - ".github/workflows/distribution-sync.yml"
   push:
     branches: [main]
     paths:
       - ".skills-repo/**"
+      - "skills/**"
+      - "site/scripts/**"
       - "skills-repo.config.json"
       - "README.md"
       - ".agents/plugins/marketplace.json"
-      - "skills/create-skill/scripts/**"
+      - ".claude-plugin/**"
+      - ".codex-plugin/**"
+      - ".cursor-plugin/**"
+      - "plugin.json"
+      - "marketplace.json"
+      - "gemini-extension.json"
+      - "LICENSE"
+      - "THIRD-PARTY-NOTICES.md"
       - "test/**"
       - ".github/workflows/distribution-sync.yml"
   workflow_dispatch:
@@ -40,3 +58,13 @@ jobs:
         run: node .skills-repo/sync.mjs --check
       - name: Validate distribution compatibility
         run: node --test test/*.test.mjs
+      - name: Build lean runtime plugin
+        run: node .skills-repo/package.mjs
+      - name: Retain runtime plugin
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: codebytes-skills-runtime
+          path: dist/plugin/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

@@ -11,7 +11,7 @@ install selected skills into an agent's supported skill directory:
 
 ```sh
 npx skills add {{repositoryUrl}} --list
-npx skills add {{repositoryUrl}} --skill csv-analysis
+npx skills add {{repositoryUrl}} --skill marp-authoring
 ```
 
 Use `--skill '*'` for the complete collection while retaining the agent-selection
@@ -26,7 +26,7 @@ copilot plugin marketplace add {{repository}}
 copilot plugin install {{packageName}}@{{packageName}}
 ```
 
-For an individual skill, install `csv-analysis@{{packageName}}` instead.
+For an individual skill, install `marp-authoring@{{packageName}}` instead.
 Individual marketplace entries use Copilot/VS Code's skill-only compatibility
 format; the complete collection is the portable Agent Plugins 1.0 package.
 
@@ -39,6 +39,32 @@ claude plugin install {{packageName}}@{{packageName}}
 
 The equivalent interactive commands start with `/plugin`. Claude uses
 `.claude-plugin/marketplace.json`, which advertises the complete collection.
+
+### Lean runtime artifact
+
+For a local plugin without repository development tooling:
+
+```sh
+node .skills-repo/package.mjs
+copilot plugin install ./dist/plugin
+```
+
+The builder writes a new `dist/plugin/` directory and refuses to overwrite an
+existing build; move the previous directory aside before rebuilding. The
+Distribution compatibility workflow also uploads a `codebytes-skills-runtime`
+artifact. Extract that artifact and pass its absolute directory to the local
+plugin installer.
+
+The artifact retains discovery manifests, instructions, scripts, references,
+assets, licenses, and locked rendering dependencies. It omits catalog sources,
+CI tooling, tests, and evals. Browser binaries and `node_modules` are not bundled;
+follow the skill README for runtime prerequisites. Source packages keep their
+tests and capability evals.
+
+Direct Git/marketplace installs still fetch the repository; this build does not
+change their download behavior. Use only one installation method per client.
+Update a local artifact installation by obtaining a fresh build and using the
+client's supported local-plugin update or reinstall workflow.
 
 ### Codex CLI
 
@@ -125,7 +151,7 @@ Review changes before applying updates, then start a new agent session.
 
 | Installation | Update procedure |
 | --- | --- |
-| Skills CLI | Run `npx skills update` and select the intended scope, or `npx skills update csv-analysis` to target one installer-managed skill. |
+| Skills CLI | Run `npx skills update` and select the intended scope, or `npx skills update marp-authoring` to target one installer-managed skill. |
 | Copilot CLI marketplace | Run `copilot plugin marketplace update {{packageName}}`, then `copilot plugin update {{packageName}}@{{packageName}}`. Substitute the individual skill name if installed separately. |
 | Copilot CLI direct Git URL | Run `copilot plugin update {{packageName}}`; no marketplace suffix is needed for a direct install. |
 | Claude Code | Run `claude plugin marketplace update {{packageName}}`, then `claude plugin update {{packageName}}@{{packageName}}`. |
@@ -210,7 +236,8 @@ node .skills-repo/sync.mjs --check
 ```
 
 The root `npm test` command above runs repository tests, not the Vally
-implementation's own tests. Lint and run each skill's deterministic tests with:
+implementation's own tests. Vally is installed once in `.github/tools/vally`,
+not repeated in each skill's runtime tooling. Lint and run deterministic tests:
 
 ```sh
 vally="$PWD/.github/tools/vally/node_modules/.bin/vally"
@@ -259,7 +286,7 @@ The **Skill Eval** workflow runs daily at **03:00 UTC** and accepts a manual
 dispatch. To evaluate one skill, or omit `-f skill=...` to evaluate all skills:
 
 ```sh
-gh workflow run skill-eval.yml --repo {{repository}} --ref {{defaultBranch}} -f skill=create-skill
+gh workflow run skill-eval.yml --repo {{repository}} --ref {{defaultBranch}} -f skill=marp-authoring
 gh run list --repo {{repository}} --workflow skill-eval.yml --limit 5
 gh run watch <run-id> --repo {{repository}}
 ```
@@ -275,21 +302,23 @@ repository files. After installing the root Vally toolchain:
 
 ```sh
 .github/tools/vally/node_modules/.bin/vally eval \
-  --eval-spec skills/create-skill/evals/create-skill/eval.yaml \
-  --skill-dir skills/create-skill \
-  --output-dir skills/create-skill/vally-results \
+  --eval-spec skills/marp-authoring/evals/marp-authoring/eval.yaml \
+  --skill-dir skills/marp-authoring \
+  --output-dir skills/marp-authoring/vally-results \
   --runs 1 --workers 1 --max-retries 0 --junit
 ```
 
-Replace `create-skill` in all three paths for another skill. Root
+Replace `marp-authoring` in all three paths for another skill. Root
 `evals/<name>/eval.yaml` files are **Waza** specs; Vally specs are inside
 `skills/<name>/evals/<name>/`. These formats are not interchangeable.
-Local skill scripts also provide `npm run eval --prefix skills/<name>` after
-their dependencies are installed.
+Local source packages also provide `npm run eval --prefix skills/<name>` and
+`npm run eval:lint --prefix skills/<name>`. Add the shared toolchain's
+`node_modules/.bin` directory to `PATH` first. Standalone source-package
+contributors need Vally 0.16.0 available on `PATH`; runtime helpers do not.
 
 Vally's Copilot SDK depends transitively on Koffi. It is not needed by Waza or
 the dependency-free helpers, but must not be removed from an evaluator lockfile
-to work around a package-feed failure. The Vally 0.16 skill toolchains pin
+to work around a package-feed failure. The shared Vally 0.16 toolchain pins
 Koffi **3.2.1** and Hono **4.13.7** through npm overrides because the configured
 Microsoft feed did not serve the previously locked 3.3.0/4.13.8 releases.
 Both pins satisfy their parents' declared dependency ranges. Reassess the

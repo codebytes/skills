@@ -9,7 +9,6 @@ import test from "node:test";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const commands = [
   ".skills-repo/sync.mjs",
-  "skills/create-skill/scripts/create-skill.mjs",
   "skills/drawio-diagrams/scripts/make-drawio-svg.mjs",
   "skills/drawio-diagrams/scripts/validate-drawio.mjs",
   "skills/marp-authoring/scripts/inspect-deck.mjs",

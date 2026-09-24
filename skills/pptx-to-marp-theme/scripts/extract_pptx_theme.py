@@ -1043,10 +1043,10 @@ def build_report(
             "autoTitleBackground": title_background_candidates[0] if title_background_candidates else None,
         },
         "outputs": {
-            "themeCss": str(Path(f"{theme_name}.css")),
-            "sampleDeck": str(Path(theme_name) / "sample.md"),
-            "report": str(Path(theme_name) / "theme-report.json"),
-            "summary": str(Path(theme_name) / "README.md"),
+            "themeCss": f"{theme_name}.css",
+            "sampleDeck": (Path(theme_name) / "sample.md").as_posix(),
+            "report": (Path(theme_name) / "theme-report.json").as_posix(),
+            "summary": (Path(theme_name) / "README.md").as_posix(),
         },
         "embeddedThemeAssets": [
             selected["filename"] for selected in selected_assets
@@ -1091,7 +1091,7 @@ def write_outputs(
     for item in media_by_path.values():
         destination = assets_dir / item["filename"]
         destination.write_bytes(item["_data"])
-        generated.append(str(destination.relative_to(output_dir)))
+        generated.append(destination.relative_to(output_dir).as_posix())
 
     def raw_candidate(candidate: dict | None) -> dict | None:
         if not candidate:
@@ -1116,28 +1116,28 @@ def write_outputs(
         ),
         encoding="utf-8",
     )
-    generated.append(str(css_path.relative_to(output_dir)))
+    generated.append(css_path.relative_to(output_dir).as_posix())
 
     sample_path = artifact_dir / "sample.md"
     sample_path.write_text(
         sample_deck(theme_name, logo, background_asset, title_background_asset),
         encoding="utf-8",
     )
-    generated.append(str(sample_path.relative_to(output_dir)))
+    generated.append(sample_path.relative_to(output_dir).as_posix())
 
     report_path = artifact_dir / "theme-report.json"
     report_path.write_text(f"{json.dumps(report, indent=2, ensure_ascii=False)}\n", encoding="utf-8")
-    generated.append(str(report_path.relative_to(output_dir)))
+    generated.append(report_path.relative_to(output_dir).as_posix())
 
     summary_path = artifact_dir / "README.md"
     summary_path.write_text(summary_markdown(report), encoding="utf-8")
-    generated.append(str(summary_path.relative_to(output_dir)))
+    generated.append(summary_path.relative_to(output_dir).as_posix())
 
     marker_payload = {
         "schemaVersion": 1,
         "sourceSha256": report["source"]["sha256"],
         "theme": theme_name,
-        "generatedFiles": sorted(generated + [str(marker.relative_to(output_dir))]),
+        "generatedFiles": sorted(generated + [marker.relative_to(output_dir).as_posix()]),
     }
     marker.write_text(f"{json.dumps(marker_payload, indent=2)}\n", encoding="utf-8")
     for relative in previous_files:

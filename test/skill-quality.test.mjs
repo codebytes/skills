@@ -3,8 +3,8 @@ import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { validatePng } from "../skills/create-skill/scripts/png.mjs";
-import { manifestFromExistingSkill } from "../skills/create-skill/scripts/create-skill.mjs";
+import { validatePng } from "../.skills-repo/lib/png.mjs";
+import { readSkillDescription } from "../.skills-repo/lib/skill-description.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const config = JSON.parse(readFileSync(join(root, "skills-repo.config.json"), "utf8"));
@@ -50,7 +50,7 @@ test("all skills have complete portable packages and bounded routing description
     assert.ok(frontmatter, `${name}: missing frontmatter`);
     assert.deepEqual([...frontmatter.matchAll(/^([a-z][a-z-]*):/gm)].map((match) => match[1]), ["name", "description"]);
     assert.match(frontmatter, new RegExp(`^name: ${name}$`, "m"));
-    const { description } = manifestFromExistingSkill({ paths: { skills: join(root, "skills") } }, name);
+    const description = readSkillDescription(source);
     assert.ok(description && description.length <= 1024, `${name}: invalid routing description`);
     assert.match(description, /USE FOR:.*DO NOT USE FOR:/);
     assert.ok(source.split("\n").length <= 500, `${name}: move long reference material out of SKILL.md`);
@@ -65,6 +65,9 @@ test("all skills have complete portable packages and bounded routing description
     assert.equal(lock.name, name);
     assert.deepEqual(lock.packages[""].dependencies, pkg.dependencies);
     assert.deepEqual(lock.packages[""].devDependencies, pkg.devDependencies);
+    for (const dependency of ["@microsoft/vally-cli", "@github/copilot-sdk", "koffi"]) {
+      assert.ok(!lock.packages[`node_modules/${dependency}`], `${name}: evaluation dependency leaked into runtime tooling`);
+    }
     validatePng(readFileSync(join(root, base, "thumbnail.png")));
     assert.ok(read(`${base}/README.md`).includes(`npx skills add ${config.owner.login}/${config.repository.name} --skill ${name}`),
       `${name}: README installs a different skill or repository`);
@@ -117,7 +120,7 @@ test("documentation link scanning ignores examples but retains real asset links"
   ].join("\n")), ["references/guide.md", "assets/chart.svg"]);
 });
 
-test("catalog skill entries and thumbnails match the canonical packages", () => {
+test("catalog skill entries reference the canonical generated thumbnails", () => {
   if (!config.catalog.enabled) return;
   const entries = readdirSync(join(root, "site/src/content/skills")).filter((file) => file.endsWith(".md")).sort();
   assert.deepEqual(entries, skills.map((name) => `${name}.md`));
@@ -125,7 +128,5 @@ test("catalog skill entries and thumbnails match the canonical packages", () => 
     const source = read(`site/src/content/skills/${name}.md`);
     assert.match(source, new RegExp(`^repoPath: skills/${name}$`, "m"));
     assert.match(source, new RegExp(`^thumb: images/thumb-${name}\\.png$`, "m"));
-    assert.ok(readFileSync(join(root, `site/public/images/thumb-${name}.png`))
-      .equals(readFileSync(join(root, `skills/${name}/thumbnail.png`))), `${name}: thumbnail drift`);
   }
 });

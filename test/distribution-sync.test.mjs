@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { buildSyncPlan, run } from "../.skills-repo/sync.mjs";
-import { applyPlan } from "../skills/create-skill/scripts/registration.mjs";
-import { createRepositoryFixture, write } from "../skills/create-skill/test/helpers.mjs";
+import { applyPlan } from "../.skills-repo/lib/atomic-plan.mjs";
+import { createRepositoryFixture, write } from "./helpers.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const marketplacePath = ".agents/plugins/marketplace.json";
@@ -75,7 +75,7 @@ test("approved sync is idempotent and preserves the table and unrelated managed 
   const readme = read(directory, "README.md");
   assert.equal(readme.split("\n## Install\n")[0], previousReadme.split("\n## Install\n")[0]);
   assert.equal(readme.split("\n## Catalog\n")[1], previousReadme.split("\n## Catalog\n")[1]);
-  assert.match(readme, /skills\/create-skill\/evals\/create-skill\/eval\.yaml/);
+  assert.match(readme, /skills\/marp-authoring\/evals\/marp-authoring\/eval\.yaml/);
   assert.match(readme, /gh workflow run skill-eval.yml --repo octocat\/skills --ref main/);
   assert.match(readme, /copilot plugin update octocat-skills@octocat-skills/);
   assert.match(readme, /codex plugin marketplace upgrade octocat-skills/);
@@ -96,10 +96,25 @@ test("sync refuses drift rather than blessing a hand-edited managed manifest", (
   assert.throws(() => buildSyncPlan(directory), /changed outside sync/);
 });
 
-test("sync refuses symlinked managed files", (t) => {
+test("sync refuses links at managed file paths", (t) => {
   const directory = fixture(t);
   rmSync(join(directory, marketplacePath));
-  symlinkSync(join(directory, "plugin.json"), join(directory, marketplacePath));
+  // Directory junctions exercise the link guard without Windows symlink privileges.
+  const windows = process.platform === "win32";
+  symlinkSync(
+    join(directory, windows ? "skills" : "plugin.json"),
+    join(directory, marketplacePath),
+    windows ? "junction" : "file",
+  );
+  assert.throws(() => buildSyncPlan(directory), /symlinked managed path/);
+});
+
+test("sync refuses linked parent directories of managed files", (t) => {
+  const directory = fixture(t);
+  const plugins = join(directory, ".agents", "plugins");
+  const target = join(directory, "actual-plugins");
+  renameSync(plugins, target);
+  symlinkSync(target, plugins, process.platform === "win32" ? "junction" : "dir");
   assert.throws(() => buildSyncPlan(directory), /symlinked managed path/);
 });
 
