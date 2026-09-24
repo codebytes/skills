@@ -16,7 +16,7 @@
     "eval": "vally eval --eval-spec evals/marp-slide-review/eval.yaml --skill-dir ."
   },
   "devDependencies": {
-    "@marp-team/marp-cli": "4.5.0",
+    "@marp-team/marp-cli": "4.5.1",
     "playwright": "1.63.0"
   }
 }
