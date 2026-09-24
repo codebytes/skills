@@ -96,6 +96,7 @@ test("every skill has a matching Vally capability suite, separate from Waza", ()
 test("documentation links exist and skills do not depend on files outside their package", () => {
   const files = [
     "README.md", "site/README.md", "evals/README.md", ".skills-repo/templates/install.md",
+    ...markdownFiles("docs"),
     ...markdownFiles("skills"),
   ];
   for (const file of files) {
@@ -110,6 +111,22 @@ test("documentation links exist and skills do not depend on files outside their 
         `${file}: link escapes its package: ${target}`);
     }
   }
+});
+
+test("README stays concise and links to preserved installation and maintenance guidance", () => {
+  const readme = read("README.md");
+  const guide = read("docs/guide.md");
+  assert.ok(readme.trimEnd().split("\n").length <= 100, "keep detailed guidance out of the README");
+  assert.doesNotMatch(guide, /\{\{[^}]+\}\}/);
+  for (const match of readme.matchAll(/docs\/guide\.md#([a-z-]+)/g)) {
+    const headings = [...guide.matchAll(/^#{1,6} (.+)$/gm)]
+      .map((heading) => heading[1].trim().toLowerCase().replaceAll(" ", "-"));
+    assert.ok(headings.includes(match[1]), `missing guide section: ${match[1]}`);
+  }
+  assert.match(guide, /skills\/marp-authoring\/evals\/marp-authoring\/eval\.yaml/);
+  assert.match(guide, /gh workflow run skill-eval.yml --repo codebytes\/skills --ref main/);
+  assert.match(guide, /copilot plugin update codebytes-skills@codebytes-skills/);
+  assert.match(guide, /codex plugin marketplace upgrade codebytes-skills/);
 });
 
 test("documentation link scanning ignores examples but retains real asset links", () => {

@@ -43,7 +43,7 @@ function renderReadme(readme, config) {
   const startIndex = readme.indexOf(start);
   const endIndex = readme.indexOf(end);
   if (endIndex <= startIndex) throw new Error("README installation section is out of order");
-  let template = readFileSync(templatePath, "utf8");
+  let template = readFileSync(templatePath, "utf8").replace(/\r\n?/g, "\n");
   for (const [key, value] of Object.entries({
     repository: `${config.owner.login}/${config.repository.name}`,
     repositoryUrl: config.repository.url,
