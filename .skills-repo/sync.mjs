@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { applyPlan, hashPlan } from "../skills/create-skill/scripts/registration.mjs";
-import { validateManagedConfig } from "../skills/create-skill/scripts/repository.mjs";
+import { applyPlan, hashPlan } from "./lib/atomic-plan.mjs";
+import { validateManagedConfig } from "./lib/repository.mjs";
 
 const marketplacePath = ".agents/plugins/marketplace.json";
 const statePath = ".skills-repo/state.json";

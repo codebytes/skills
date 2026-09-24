@@ -14,17 +14,5 @@
     "test": "node --test test/*.test.mjs",
     "eval:lint": "vally lint --eval-spec evals/drawio-diagrams/eval.yaml --strict",
     "eval": "vally eval --eval-spec evals/drawio-diagrams/eval.yaml --skill-dir ."
-  },
-  "devDependencies": {
-    "@microsoft/vally-cli": "0.16.0"
-  },
-  "allowScripts": {
-    "@vscode/deviceid": false,
-    "better-sqlite3": false,
-    "koffi": false
-  },
-  "overrides": {
-    "koffi": "3.2.1",
-    "hono": "4.13.7"
   }
 }

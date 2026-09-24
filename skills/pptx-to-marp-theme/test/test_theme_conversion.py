@@ -272,6 +272,42 @@ class ThemeConversionTests(unittest.TestCase):
                     EXTRACTOR_MODULE.write_outputs(invalid, archive, output, "conference", True, [])
             self.assertEqual(previous, {p.relative_to(output): p.read_bytes() for p in output.rglob("*") if p.is_file()})
 
+    def test_generated_paths_are_portable_and_force_reuses_the_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            template = self.make_template(root)
+            output = root / "themes"
+            with zipfile.ZipFile(template) as archive:
+                report = EXTRACTOR_MODULE.write_outputs(template, archive, output, "conference", False, [])
+            self.assertEqual(report["outputs"], {
+                "themeCss": "conference.css",
+                "sampleDeck": "conference/sample.md",
+                "report": "conference/theme-report.json",
+                "summary": "conference/README.md",
+            })
+            marker = output / "conference" / ".pptx-to-marp-theme.json"
+            recorded = json.loads(marker.read_text(encoding="utf-8"))
+            expected = sorted([
+                "conference.css",
+                "conference/.pptx-to-marp-theme.json",
+                "conference/README.md",
+                "conference/assets/image1.png",
+                "conference/sample.md",
+                "conference/theme-report.json",
+            ])
+            self.assertEqual(recorded["generatedFiles"], expected)
+            prior = {name: (output / name).read_bytes() for name in expected}
+            stale = output / "conference" / "assets" / "old.png"
+            stale.write_bytes(PNG_1X1)
+            recorded["generatedFiles"].append("conference/assets/old.png")
+            marker.write_text(json.dumps(recorded), encoding="utf-8")
+            with zipfile.ZipFile(template) as archive:
+                EXTRACTOR_MODULE.write_outputs(template, archive, output, "conference", True, [])
+            self.assertFalse(stale.exists())
+            self.assertEqual({name: (output / name).read_bytes() for name in expected}, prior)
+            with self.assertRaisesRegex(ValueError, "Unsafe generated path"):
+                EXTRACTOR_MODULE.managed_output_path(output, "conference", "conference\\sample.md")
+
     def test_force_rejects_cross_theme_marker_paths_and_unrecorded_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

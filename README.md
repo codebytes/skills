@@ -6,8 +6,6 @@ Portable, tested agent skills for GitHub Copilot, Codex, Claude Code, Cursor, Ge
 
 | Skill | What it does |
 |---|---|
-| [`create-skill`](skills/create-skill/) | \*\*WORKFLOW SKILL\*\* - Create and register a complete portable agent skill in a managed skills-repo\.config\.json repository or an existing skills repository\. Produces focused instructions, documentation, deterministic tests, Vally evals, locked tooling, registration, and optional validated thumbnail art\. USE FOR: create-skill, create a skill, add an agent skill, scaffold a portable skill, register a skill, add skill to managed repo, create skill in existing repo, generate an example skill from a fixture, add skill thumbnail art\. DO NOT USE FOR: scaffolding a new marketplace collection from scratch \(use create-skills-repo\), editing one existing skill instruction without registration work \(use skill-authoring\), creating an agent persona\. |
-| [`csv-analysis`](skills/csv-analysis/) | \*\*WORKFLOW SKILL\*\* - Analyze CSV files and generate statistical data quality reports\. USE FOR: analyze CSV files, profile tabular data, inspect CSV quality, generate CSV reports\. DO NOT USE FOR: editing spreadsheets or producing XLSX workbooks; use spreadsheet tooling instead\. |
 | [`drawio-diagrams`](skills/drawio-diagrams/) | \*\*WORKFLOW SKILL\*\* - Create, validate, and edit accessible draw\.io SVG diagrams that remain visually editable\. Supports basic flowchart and architecture shapes, semantic styling, orthogonal connectors, strict specification validation, and embedded mxGraph XML\. USE FOR: create a draw\.io diagram, create a \.drawio\.svg, make an editable architecture or flow diagram, validate draw\.io XML, use diagrams\.net\. DO NOT USE FOR: quick throwaway diagrams that do not need draw\.io editability; use Mermaid instead, or complex cloud/UML diagrams that require full draw\.io shape libraries; use draw\.io Desktop or jgraph/drawio-mcp\. |
 | [`marp-authoring`](skills/marp-authoring/) | \*\*WORKFLOW SKILL\*\* - Create and revise Marp decks with reliable slide structure, content transformations, speaker notes, layouts, and existing theme styles\. USE FOR: create Marp slides, add a slide, rewrite slide content, split or merge slides, reorder a deck, add speaker notes, apply slide layouts, restyle slides\. DO NOT USE FOR: generating chart or diagram assets; use marp-visuals, or reviewing overflow and rendering; use marp-slide-review\. |
 | [`marp-slide-review`](skills/marp-slide-review/) | \*\*WORKFLOW SKILL\*\* - Review rendered Marp slide decks for overflow, clipping, visual balance, asset failures, and HTML/PDF rendering differences\. USE FOR: review Marp slides, check slide overflow, inspect rendered slides, lint a deck layout, verify slides fit, compare PDF rendering\. DO NOT USE FOR: authoring slide content; use marp-authoring, or generating chart and diagram assets; use marp-visuals\. |
@@ -27,7 +25,7 @@ install selected skills into an agent's supported skill directory:
 
 ```sh
 npx skills add https://github.com/codebytes/skills --list
-npx skills add https://github.com/codebytes/skills --skill csv-analysis
+npx skills add https://github.com/codebytes/skills --skill marp-authoring
 ```
 
 Use `--skill '*'` for the complete collection while retaining the agent-selection
@@ -42,7 +40,7 @@ copilot plugin marketplace add codebytes/skills
 copilot plugin install codebytes-skills@codebytes-skills
 ```
 
-For an individual skill, install `csv-analysis@codebytes-skills` instead.
+For an individual skill, install `marp-authoring@codebytes-skills` instead.
 Individual marketplace entries use Copilot/VS Code's skill-only compatibility
 format; the complete collection is the portable Agent Plugins 1.0 package.
 
@@ -55,6 +53,32 @@ claude plugin install codebytes-skills@codebytes-skills
 
 The equivalent interactive commands start with `/plugin`. Claude uses
 `.claude-plugin/marketplace.json`, which advertises the complete collection.
+
+### Lean runtime artifact
+
+For a local plugin without repository development tooling:
+
+```sh
+node .skills-repo/package.mjs
+copilot plugin install ./dist/plugin
+```
+
+The builder writes a new `dist/plugin/` directory and refuses to overwrite an
+existing build; move the previous directory aside before rebuilding. The
+Distribution compatibility workflow also uploads a `codebytes-skills-runtime`
+artifact. Extract that artifact and pass its absolute directory to the local
+plugin installer.
+
+The artifact retains discovery manifests, instructions, scripts, references,
+assets, licenses, and locked rendering dependencies. It omits catalog sources,
+CI tooling, tests, and evals. Browser binaries and `node_modules` are not bundled;
+follow the skill README for runtime prerequisites. Source packages keep their
+tests and capability evals.
+
+Direct Git/marketplace installs still fetch the repository; this build does not
+change their download behavior. Use only one installation method per client.
+Update a local artifact installation by obtaining a fresh build and using the
+client's supported local-plugin update or reinstall workflow.
 
 ### Codex CLI
 
@@ -141,7 +165,7 @@ Review changes before applying updates, then start a new agent session.
 
 | Installation | Update procedure |
 | --- | --- |
-| Skills CLI | Run `npx skills update` and select the intended scope, or `npx skills update csv-analysis` to target one installer-managed skill. |
+| Skills CLI | Run `npx skills update` and select the intended scope, or `npx skills update marp-authoring` to target one installer-managed skill. |
 | Copilot CLI marketplace | Run `copilot plugin marketplace update codebytes-skills`, then `copilot plugin update codebytes-skills@codebytes-skills`. Substitute the individual skill name if installed separately. |
 | Copilot CLI direct Git URL | Run `copilot plugin update codebytes-skills`; no marketplace suffix is needed for a direct install. |
 | Claude Code | Run `claude plugin marketplace update codebytes-skills`, then `claude plugin update codebytes-skills@codebytes-skills`. |
@@ -226,7 +250,8 @@ node .skills-repo/sync.mjs --check
 ```
 
 The root `npm test` command above runs repository tests, not the Vally
-implementation's own tests. Lint and run each skill's deterministic tests with:
+implementation's own tests. Vally is installed once in `.github/tools/vally`,
+not repeated in each skill's runtime tooling. Lint and run deterministic tests:
 
 ```sh
 vally="$PWD/.github/tools/vally/node_modules/.bin/vally"
@@ -275,7 +300,7 @@ The **Skill Eval** workflow runs daily at **03:00 UTC** and accepts a manual
 dispatch. To evaluate one skill, or omit `-f skill=...` to evaluate all skills:
 
 ```sh
-gh workflow run skill-eval.yml --repo codebytes/skills --ref main -f skill=create-skill
+gh workflow run skill-eval.yml --repo codebytes/skills --ref main -f skill=marp-authoring
 gh run list --repo codebytes/skills --workflow skill-eval.yml --limit 5
 gh run watch <run-id> --repo codebytes/skills
 ```
@@ -291,21 +316,23 @@ repository files. After installing the root Vally toolchain:
 
 ```sh
 .github/tools/vally/node_modules/.bin/vally eval \
-  --eval-spec skills/create-skill/evals/create-skill/eval.yaml \
-  --skill-dir skills/create-skill \
-  --output-dir skills/create-skill/vally-results \
+  --eval-spec skills/marp-authoring/evals/marp-authoring/eval.yaml \
+  --skill-dir skills/marp-authoring \
+  --output-dir skills/marp-authoring/vally-results \
   --runs 1 --workers 1 --max-retries 0 --junit
 ```
 
-Replace `create-skill` in all three paths for another skill. Root
+Replace `marp-authoring` in all three paths for another skill. Root
 `evals/<name>/eval.yaml` files are **Waza** specs; Vally specs are inside
 `skills/<name>/evals/<name>/`. These formats are not interchangeable.
-Local skill scripts also provide `npm run eval --prefix skills/<name>` after
-their dependencies are installed.
+Local source packages also provide `npm run eval --prefix skills/<name>` and
+`npm run eval:lint --prefix skills/<name>`. Add the shared toolchain's
+`node_modules/.bin` directory to `PATH` first. Standalone source-package
+contributors need Vally 0.16.0 available on `PATH`; runtime helpers do not.
 
 Vally's Copilot SDK depends transitively on Koffi. It is not needed by Waza or
 the dependency-free helpers, but must not be removed from an evaluator lockfile
-to work around a package-feed failure. The Vally 0.16 skill toolchains pin
+to work around a package-feed failure. The shared Vally 0.16 toolchain pins
 Koffi **3.2.1** and Hono **4.13.7** through npm overrides because the configured
 Microsoft feed did not serve the previously locked 3.3.0/4.13.8 releases.
 Both pins satisfy their parents' declared dependency ranges. Reassess the
@@ -333,8 +360,13 @@ Publishing requires separate owner approval. The generated Pages workflow never 
 
 ## Adding a skill
 
-Use the bundled `create-skill` skill. Individual skill authoring does not
-belong to the repository lifecycle tool.
+Add a self-contained package under `skills/<name>/`, following the existing
+skills. Include instructions, a README, a license, deterministic tests,
+capability evals, and a thumbnail. Add its Waza trigger suite under `evals/<name>/`
+and its catalog entry under `site/`. Catalog thumbnails are generated at build time.
+
+Run the external `create-skills-repo sync` lifecycle, then the local compatibility
+sync described above, to update generated registrations.
 
 ## License
 

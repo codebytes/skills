@@ -8,7 +8,7 @@ import {
   assertValidPng,
   encodeDeterministicPlaceholderPng,
   validatePng,
-} from "../scripts/png.mjs";
+} from "../.skills-repo/lib/png.mjs";
 
 function crc32(buffer) {
   const table = Array.from({ length: 256 }, (_, value) => {

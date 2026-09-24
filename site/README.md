@@ -11,15 +11,16 @@ This Astro site is the searchable catalog for the canonical skills in `../skills
 - Light and dark themes
 - Base-path-safe links for project and user GitHub Pages sites
 - A least-privilege, SHA-pinned GitHub Pages workflow
-- Thumbnails kept byte-identical to their canonical skill copies
+- Thumbnails generated from canonical skill copies before development and builds
 
 ## Customize
 
-1. Add skills with the bundled `create-skill` workflow in the repository root.
+1. Add self-contained packages under `skills/<name>/`, following the existing skills.
 2. Run the repository's managed sync lifecycle after adding or removing skills.
 3. Keep catalog metadata under `src/content/skills/` aligned with canonical skill
    names, install commands, and source paths.
-4. Keep `public/images/thumb-<name>.png` identical to the skill's `thumbnail.png`.
+4. Edit the skill's `thumbnail.png`; `npm run dev` and `npm run build` generate
+   ignored `public/images/thumb-<name>.png` copies automatically.
 5. Edit layouts, components, `public/images/og.svg`, and `public/favicon.svg` for
    site-level presentation changes.
 

@@ -45,8 +45,13 @@ Run from this skill's directory:
 ```sh
 npm ci --ignore-scripts
 npm test
-npm run eval:lint
 ```
+
+Evaluation tooling is not a runtime dependency. With Vally 0.16.0 on `PATH`,
+run `npm run eval:lint` or `npm run eval`. Repository contributors install
+the shared toolchain under `.github/tools/vally` once and add its
+`node_modules/.bin` directory to `PATH`. Tests and evals are included in the
+source package, not the lean runtime artifact.
 
 The deterministic test checks the portable skill shape. The Vally capability eval verifies that
 the agent follows the workflow.

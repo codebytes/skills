@@ -16,16 +16,6 @@
     "eval": "vally eval --eval-spec evals/marp-visuals/eval.yaml --skill-dir ."
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "11.16.0",
-    "@microsoft/vally-cli": "0.16.0"
-  },
-  "allowScripts": {
-    "@vscode/deviceid": false,
-    "better-sqlite3": false,
-    "koffi": false
-  },
-  "overrides": {
-    "koffi": "3.2.1",
-    "hono": "4.13.7"
+    "@mermaid-js/mermaid-cli": "11.16.0"
   }
 }

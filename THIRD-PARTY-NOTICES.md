@@ -6,14 +6,14 @@ other authors.
 ## jongio/skills
 
 The managed repository lifecycle, distribution-manifest patterns, catalog
-integration, and bundled `skills/create-skill` workflow are derived from:
+integration, and internal repository helpers under `.skills-repo/lib/` are derived from:
 
 - Source: <https://github.com/jongio/skills>
 - Revision: `f65c341c7006135f8924ae81cdb8f106807a67d1`
 - License: MIT
 - Copyright: Jon Gallant
 
-The original license is retained in `skills/create-skill/LICENSE`.
+The original license is retained in `.skills-repo/LICENSE`.
 
 ## jongio/gh-pages-templates
 

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "site/**"
+      - "skills/*/thumbnail.png"
       - ".github/workflows/catalog-check.yml"
   workflow_dispatch:
 
