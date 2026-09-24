@@ -73,12 +73,15 @@ test("approved sync is idempotent and preserves the table and unrelated managed 
   const plan = buildSyncPlan(directory);
   applyPlan(plan, { approval: plan.hash });
   const readme = read(directory, "README.md");
+  assert.ok(!readme.includes("\r"), "generated README uses consistent LF line endings");
   assert.equal(readme.split("\n## Install\n")[0], previousReadme.split("\n## Install\n")[0]);
   assert.equal(readme.split("\n## Catalog\n")[1], previousReadme.split("\n## Catalog\n")[1]);
-  assert.match(readme, /skills\/marp-authoring\/evals\/marp-authoring\/eval\.yaml/);
-  assert.match(readme, /gh workflow run skill-eval.yml --repo octocat\/skills --ref main/);
-  assert.match(readme, /copilot plugin update octocat-skills@octocat-skills/);
-  assert.match(readme, /codex plugin marketplace upgrade octocat-skills/);
+  assert.match(readme, /copilot plugin marketplace add octocat\/skills/);
+  assert.match(readme, /copilot plugin install octocat-skills@octocat-skills/);
+  assert.match(readme, /npx skills add https:\/\/github\.com\/octocat\/skills --skill marp-authoring/);
+  assert.match(readme, /docs\/guide\.md#install/);
+  assert.match(readme, /docs\/guide\.md#updating-installed-skills-and-plugins/);
+  assert.match(readme, /docs\/guide\.md#skill-quality/);
   assert.doesNotMatch(readme, /\{\{[^}]+\}\}/);
   const state = JSON.parse(read(directory, statePath));
   for (const [file, record] of Object.entries(state.files)) {
