@@ -13,10 +13,9 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { runtimeFile } from "./setup-runtime.mjs";
 
-const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const HELP = `Render a Marp deck to PNGs and an HTML review gallery.
 
 Usage:
@@ -83,9 +82,7 @@ function marpCommand() {
       ? { command: process.execPath, prefix: [executable] }
       : { command: executable, prefix: [] };
   }
-  const localCli = join(SKILL_ROOT, "node_modules", "@marp-team", "marp-cli", "marp-cli.js");
-  if (existsSync(localCli)) return { command: process.execPath, prefix: [localCli] };
-  throw new Error("Marp CLI is not installed. Run npm ci --ignore-scripts in the skill directory.");
+  return { command: process.execPath, prefix: [runtimeFile("@marp-team/marp-cli/marp-cli.js")] };
 }
 
 function runMarp(args) {

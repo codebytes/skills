@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { execFileSync } from "node:child_process";
 import { validatePng } from "../.skills-repo/lib/png.mjs";
 import { readSkillDescription } from "../.skills-repo/lib/skill-description.mjs";
 
@@ -65,13 +66,30 @@ test("all skills have complete portable packages and bounded routing description
     assert.equal(lock.name, name);
     assert.deepEqual(lock.packages[""].dependencies, pkg.dependencies);
     assert.deepEqual(lock.packages[""].devDependencies, pkg.devDependencies);
-    for (const dependency of ["@microsoft/vally-cli", "@github/copilot-sdk", "koffi"]) {
+    for (const dependency of ["@microsoft/vally-cli", "@github/copilot-sdk", "@github/copilot", "koffi"]) {
       assert.ok(!lock.packages[`node_modules/${dependency}`], `${name}: evaluation dependency leaked into runtime tooling`);
     }
+    assert.ok(!Object.keys(lock.packages).some((path) => /node_modules\/@github\/copilot(?:-|\/|$)/.test(path)),
+      `${name}: Copilot binary leaked into runtime tooling`);
     validatePng(readFileSync(join(root, base, "thumbnail.png")));
     assert.ok(read(`${base}/README.md`).includes(`npx skills add ${config.owner.login}/${config.repository.name} --skill ${name}`),
       `${name}: README installs a different skill or repository`);
   }
+});
+
+test("generated dependency and build trees are untracked and ignored at every depth", () => {
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0");
+  assert.ok(!tracked.some((path) => /(?:^|\/)(?:node_modules|dist|build|__pycache__)\//.test(path)));
+  const paths = [
+    "node_modules/example/index.js", "skills/marp-visuals/node_modules/example/index.js",
+    "skills/marp-slide-review/scripts/node_modules/example/index.js",
+    "skills/marp-visuals/build/generated.js", "dist/plugin/plugin.json",
+    "skills/pptx-to-marp-theme/scripts/__pycache__/example.pyc",
+  ];
+  const ignored = execFileSync("git", ["check-ignore", "--stdin"], {
+    cwd: root, input: paths.join("\n") + "\n", encoding: "utf8",
+  }).trim().split("\n");
+  assert.deepEqual(ignored, paths);
 });
 
 test("every skill has a matching Vally capability suite, separate from Waza", () => {

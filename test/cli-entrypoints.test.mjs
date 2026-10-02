@@ -14,8 +14,10 @@ const commands = [
   "skills/marp-authoring/scripts/inspect-deck.mjs",
   "skills/marp-slide-review/scripts/check-overflow.mjs",
   "skills/marp-slide-review/scripts/render-review.mjs",
+  "skills/marp-slide-review/scripts/setup-runtime.mjs",
   "skills/marp-visuals/scripts/chart-to-svg.mjs",
   "skills/marp-visuals/scripts/render-mermaid.mjs",
+  "skills/marp-visuals/scripts/setup-runtime.mjs",
 ];
 
 test("portable CLI entry points run through directory aliases and stay inert on import", (t) => {

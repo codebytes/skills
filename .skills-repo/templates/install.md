@@ -25,6 +25,8 @@ single-client setup: it installs every skill to every agent without prompts.
 For **Claude Code, Codex, Gemini, VS Code, Rider**, and lean local plugins, see the
 [installation guide](docs/guide.md#install). Codex CLI requires **0.142.0+**.
 See [supported agents](docs/guide.md#supported-agents) for compatibility limits.
+Rendering dependencies belong in an [external runtime cache](docs/guide.md#runtime-dependency-cache),
+never inside an installed skill or plugin.
 
 ## Updating installed skills and plugins
 

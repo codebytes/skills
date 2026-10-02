@@ -11,6 +11,10 @@ const rootFiles = [
 ];
 const skillFiles = ["SKILL.md", "README.md", "LICENSE", "thumbnail.png", "package.json", "package-lock.json"];
 const runtimeExtensions = new Set([".mjs", ".js", ".py", ".md", ".json", ".svg", ".mmd", ".css", ".png"]);
+const excludedEntries = new Set([
+  "node_modules", "__pycache__", ".git", ".cache", ".venv", "venv",
+  "dist", "build", "coverage", "test", "evals", "vally-results", ".results", ".pytest_cache",
+]);
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 
 export function runtimeFiles(root) {
@@ -24,8 +28,8 @@ export function runtimeFiles(root) {
   function walk(relative) {
     if (lstatSync(join(root, relative)).isSymbolicLink()) throw new Error(`Symlinked runtime directory: ${relative}`);
     for (const entry of readdirSync(join(root, relative), { withFileTypes: true })) {
+      if (excludedEntries.has(entry.name)) continue;
       if (entry.isSymbolicLink()) throw new Error(`Symlinked runtime source: ${relative}/${entry.name}`);
-      if (["node_modules", "__pycache__"].includes(entry.name)) continue;
       const path = `${relative}/${entry.name}`;
       if (entry.isDirectory()) walk(path);
       else if (runtimeExtensions.has(extname(entry.name))) add(path);
@@ -52,8 +56,11 @@ export function runtimeFiles(root) {
   files.set("README.md", Buffer.from(`# ${JSON.parse(files.get("plugin.json")).name} runtime
 
 This lean plugin contains skill instructions, runtime scripts, references,
-assets, and locked rendering dependencies. Tests, evaluation tooling, and
-catalog sources remain in the source repository. Browser binaries are not bundled.
+assets, and rendering dependency lockfiles. Tests, evaluation tooling, and
+catalog sources remain in the source repository. Dependencies and browsers are not bundled.
+Run each rendering skill's scripts/setup-runtime.mjs to install locked dependencies
+in an external user cache. Never run npm ci/install inside an installed plugin
+or link node_modules back into it; IDEs may copy the entire plugin tree.
 
 For Copilot CLI, install this extracted directory with:
 

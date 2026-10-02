@@ -69,6 +69,11 @@ Chart values must be finite JSON numbers; missing values, booleans, and numeric
 strings are rejected rather than silently converted to zero. Run helpers with
 Node.js 22.20+. Mermaid rendering also needs the locked npm dependencies and a
 compatible Chrome/Chromium executable; see the skill README for setup.
+Run `node <skill-directory>/scripts/setup-runtime.mjs` to install locked
+dependencies in the external user cache. Never run `npm ci`/`npm install` in
+an installed skill/plugin or link `node_modules` back into it. Keep generated
+assets in the deck project. Missing dependencies report the setup command;
+rendering does not implicitly download packages.
 
 ## Safety
 

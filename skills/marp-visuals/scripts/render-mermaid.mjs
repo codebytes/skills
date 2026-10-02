@@ -2,8 +2,8 @@
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { runtimeFile } from "./setup-runtime.mjs";
 
 const HELP = `Render Mermaid source to a static SVG.
 
@@ -12,8 +12,9 @@ Usage:
     [--theme default|neutral|dark|forest] [--background color]
     [--width px] [--height px] [--scale number]
 
-Set MERMAID_CLI_PATH to an mmdc executable when the bundled dependency is not
-installed. Set PUPPETEER_EXECUTABLE_PATH or CHROME_PATH for a system browser.`;
+Run scripts/setup-runtime.mjs to prepare the locked external runtime cache.
+Set MERMAID_CLI_PATH to override it with a reviewed mmdc executable.
+Set PUPPETEER_EXECUTABLE_PATH or CHROME_PATH for a system browser.`;
 
 export function parseArgs(argv) {
   const result = {
@@ -62,13 +63,9 @@ function commandForCli() {
       : { command: explicit, prefix: [] };
   }
 
-  const skillRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-  const localCli = resolve(skillRoot, "node_modules", "@mermaid-js", "mermaid-cli", "src", "cli.js");
-  if (existsSync(localCli)) return { command: process.execPath, prefix: [localCli] };
-
   return {
-    command: process.platform === "win32" ? "mmdc.cmd" : "mmdc",
-    prefix: [],
+    command: process.execPath,
+    prefix: [runtimeFile("@mermaid-js/mermaid-cli/src/cli.js")],
   };
 }
 
@@ -90,6 +87,7 @@ export function renderMermaid(options) {
     throw new Error("Mermaid source requires accTitle and accDescr for an accessible SVG.");
   }
 
+  const cli = commandForCli();
   mkdirSync(dirname(output), { recursive: true });
   const work = mkdtempSync(resolve(dirname(output), ".mermaid-render-"));
   const rendered = resolve(work, "diagram.svg");
@@ -103,7 +101,6 @@ export function renderMermaid(options) {
   if (options.width !== null) args.push("-w", String(options.width));
   if (options.height !== null) args.push("-H", String(options.height));
 
-  const cli = commandForCli();
   const browser = process.env.PUPPETEER_EXECUTABLE_PATH ?? process.env.CHROME_PATH;
   try {
     const result = spawnSync(cli.command, [...cli.prefix, ...args], {
