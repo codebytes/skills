@@ -74,18 +74,22 @@ and measures each slide in headless Chromium.
 `scripts/render-review.mjs` renders PNGs, an optional PDF, and an HTML review
 gallery. Resolve `scripts/` paths relative to this skill directory.
 
-Install this skill's dependencies. It reuses an installed Chrome, Chromium, or
+Install dependencies into the external runtime cache. It reuses an installed Chrome, Chromium, or
 Edge browser when available. Install Playwright Chromium only when no compatible
 system browser exists:
 
 ```bash
-npm ci --ignore-scripts
+node <skill-directory>/scripts/setup-runtime.mjs
 ```
 
-Run installation commands inside this skill directory with Node.js 22.20+.
-When a browser is missing, `npx playwright install chromium` supplies it for
-the overflow checker. Marp CLI uses its own browser discovery; set `CHROME_PATH`
-to the executable if PNG/PDF export cannot find that browser.
+Run setup with Node.js 22.20+ from any working directory. Never run `npm ci` or
+`npm install` inside an installed skill/plugin or link `node_modules` back into
+it. Setup uses the locked dependencies in a versioned user cache; see the README
+for cache locations and `CODEBYTES_SKILLS_CACHE`. Keep generated outputs in the
+deck project or the default temporary directory, not the plugin.
+When a browser is missing, add `--install-browser` to setup to download Chromium
+outside the plugin. Marp CLI uses its own browser discovery; set `CHROME_PATH`
+to the executable printed by setup if PNG/PDF export cannot find that browser.
 
 The skill pins Marp CLI and Playwright in `package-lock.json`.
 Both helpers support `MARP_CMD` as one reviewed executable or JavaScript file

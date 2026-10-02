@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,8 +79,17 @@ test("runtime packaging rejects stale registration and excludes incidental files
   writeFileSync(join(scripts, ".env"), "PRIVATE_SETTING=not-for-distribution");
   mkdirSync(join(scripts, "__pycache__"));
   writeFileSync(join(scripts, "__pycache__", "example.pyc"), "cache");
+  for (const name of ["node_modules", "build", "dist", ".cache", "coverage", "test", "evals", ".venv"]) {
+    mkdirSync(join(scripts, name));
+    writeFileSync(join(scripts, name, "generated.js"), "not for distribution");
+    writeFileSync(join(scripts, name, "generated.json"), "{}");
+  }
+  const assets = join(directory, "skills", "marp-authoring", "assets");
+  symlinkSync(join(scripts, "node_modules"), join(assets, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir");
   const files = runtimeFiles(directory);
   assert.ok(![...files.keys()].some((path) => path.endsWith(".env") || path.endsWith(".pyc")));
+  assert.ok(![...files.keys()].some((path) => /\/(?:node_modules|dist|build|\.cache|coverage|test|evals|\.venv)\//.test(path)));
   const marketplace = json(join(directory, "marketplace.json"));
   marketplace.plugins.pop();
   writeFileSync(join(directory, "marketplace.json"), JSON.stringify(marketplace));

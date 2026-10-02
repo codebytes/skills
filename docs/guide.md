@@ -64,7 +64,7 @@ artifact. Extract that artifact and pass its absolute directory to the local
 plugin installer.
 
 The artifact retains discovery manifests, instructions, scripts, references,
-assets, licenses, and locked rendering dependencies. It omits catalog sources,
+assets, licenses, and rendering dependency lockfiles. It omits catalog sources,
 CI tooling, tests, and evals. Browser binaries and `node_modules` are not bundled;
 follow the skill README for runtime prerequisites. Source packages keep their
 tests and capability evals.
@@ -73,6 +73,54 @@ Direct Git/marketplace installs still fetch the repository; this build does not
 change their download behavior. Use only one installation method per client.
 Update a local artifact installation by obtaining a fresh build and using the
 client's supported local-plugin update or reinstall workflow.
+
+### Runtime dependency cache
+
+Installed skills/plugins are read-only runtime sources, not npm workspaces.
+Never run `npm ci`/`npm install` in them or symlink `node_modules` into them.
+VS Code discovers Copilot CLI plugins and can copy their complete directory trees,
+including ignored files and symlink targets. Git ignore rules do not control
+that copy. Install the lean artifact rather than a dependency-populated checkout;
+do not invent plugin manifest exclusion fields or assume `.npmignore` controls
+IDE copying.
+
+Only `marp-slide-review` and Mermaid rendering in `marp-visuals` need npm runtime
+dependencies. Each carries a self-contained helper:
+
+```sh
+node <skill-directory>/scripts/setup-runtime.mjs
+node <skill-directory>/scripts/setup-runtime.mjs --print-path
+```
+
+Setup copies the package metadata and lockfile into an external, content-keyed
+cache and runs `npm ci --include=dev --ignore-scripts --no-audit --no-fund`.
+No evaluation/Copilot dependencies or browsers are installed by that command.
+Install failures are reported and partial staging directories removed; successful
+installs are reused across source and lean plugin copies with identical locks.
+Renderers require that cache and never install packages implicitly. The two
+setup helper copies are intentionally identical so either skill works standalone.
+
+Default cache bases are `~/Library/Caches/codebytes-skills` on macOS,
+`$XDG_CACHE_HOME/codebytes-skills` (or `~/.cache/codebytes-skills`) on Linux, and
+`%LOCALAPPDATA%/codebytes-skills` on Windows. `CODEBYTES_SKILLS_CACHE` overrides
+the base with an absolute path outside the source repository, skill, or plugin.
+Keep that setting consistent between setup and rendering. Lock/manifest changes,
+OS/architecture changes, and Node major upgrades select new runtime directories.
+Stop renders before deleting specific obsolete cache directories; do not remove
+unrelated user caches. Setup can recreate a missing runtime.
+
+Use an existing browser where possible. Slide review's optional
+`--install-browser` downloads locked Playwright Chromium into the external cache
+and prints its executable for Marp's `CHROME_PATH`. An explicit
+`PLAYWRIGHT_BROWSERS_PATH` must also be absolute and external; `0` is disallowed.
+Mermaid uses `PUPPETEER_EXECUTABLE_PATH` or `CHROME_PATH` with a system browser.
+Keep deck assets and render output outside installed plugins too.
+
+Existing bloated installations are not cleaned automatically. Disable/remove
+them through their original client and reinstall a clean artifact after preserving
+any user changes. This change cannot remove old ignored `node_modules` from
+another checkout or an already-copied IDE cache. Repository validation/evaluation
+commands below are for a source checkout only, never an installed plugin.
 
 ### Codex CLI
 
@@ -255,7 +303,6 @@ for skill in skills/*; do
   id=${skill#skills/}
   "$vally" lint "$skill" --strict
   "$vally" lint --eval-spec "$skill/evals/$id/eval.yaml" --strict
-  npm ci --prefix "$skill" --ignore-scripts
   npm test --prefix "$skill"
 done
 ```

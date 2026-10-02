@@ -24,7 +24,8 @@
  *   -h, --help          Show help
  *
  * Requirements:
- *   npm ci --ignore-scripts && npx playwright install chromium
+ *   node <skill-directory>/scripts/setup-runtime.mjs
+ *   Add --install-browser only when no compatible system browser is available.
  *   Marp CLI is pinned in this skill package. Override with MARP_CMD only when
  *   intentionally using another reviewed installation.
  */
@@ -33,9 +34,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const SKILL_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+import { pathToFileURL } from 'node:url';
+import { browserEnvironment, runtimeFile } from './setup-runtime.mjs';
 
 const HELP = `Detect content overflow in Marp slides.
 
@@ -91,13 +91,8 @@ export function parseArgs(argv) {
 }
 
 async function loadChromium() {
-  let chromium;
-  try {
-    ({ chromium } = await import('playwright'));
-  } catch (error) {
-    if (error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
-    throw new Error('Playwright is not installed. Run npm ci --ignore-scripts in the skill directory.', { cause: error });
-  }
+  process.env.PLAYWRIGHT_BROWSERS_PATH = browserEnvironment().PLAYWRIGHT_BROWSERS_PATH;
+  const { chromium } = await import(pathToFileURL(runtimeFile('playwright/index.mjs')).href);
   const candidates = [
       process.env.CHROME_PATH,
       process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -143,12 +138,9 @@ function runMarp(args) {
     });
     return;
   }
-  const localCli = join(SKILL_ROOT, 'node_modules', '@marp-team', 'marp-cli', 'marp-cli.js');
-  if (existsSync(localCli)) {
-    execFileSync(process.execPath, [localCli, ...args], { stdio: ['ignore', 'ignore', 'pipe'] });
-    return;
-  }
-  throw new Error('Marp CLI is not installed. Run npm ci --ignore-scripts in the skill directory.');
+  execFileSync(process.execPath, [runtimeFile('@marp-team/marp-cli/marp-cli.js'), ...args], {
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
 }
 
 export function measureDocument(threshold, doc = document) {

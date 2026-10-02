@@ -19,12 +19,29 @@ Marp CLI has separate browser discovery for PNG/PDF export; set `CHROME_PATH`
 to a compatible browser executable if it cannot locate one.
 
 ```sh
-npm ci --ignore-scripts
+node scripts/setup-runtime.mjs
 ```
 
 If no compatible browser is installed, install Playwright Chromium with
-`npx playwright install chromium` and point `CHROME_PATH` at its executable
-when using Marp's export commands.
+`node scripts/setup-runtime.mjs --install-browser`. Setup prints the executable
+to use for `CHROME_PATH` when running Marp's export commands.
+
+Setup runs locked `npm ci --include=dev --ignore-scripts` in an external cache,
+never in this skill. The default base is `~/Library/Caches/codebytes-skills` on
+macOS, `$XDG_CACHE_HOME/codebytes-skills` (or `~/.cache/codebytes-skills`) on Linux,
+and `%LOCALAPPDATA%/codebytes-skills` on Windows. Set `CODEBYTES_SKILLS_CACHE` to
+an absolute external directory to override it; use the same value for setup and
+rendering. The key includes the manifests, lockfile, OS, architecture, and Node
+major version. Updating dependencies or Node selects a fresh cache automatically.
+`--print-path` shows the exact runtime directory without installing anything.
+
+Browser downloads use the external cache's `browsers/` directory, or an absolute
+external `PLAYWRIGHT_BROWSERS_PATH`. In-skill browser mode (`0`) is rejected.
+Never run `npm ci`/`npm install` or link `node_modules` inside an installed skill
+or plugin. VS Code can copy these trees when discovering Copilot CLI plugins.
+Keep decks and generated review output in your project, not the installed skill.
+After stopping renders, old runtime directories printed by `--print-path` may
+be removed individually; setup recreates missing dependencies on demand.
 
 Run both structural and rendered review:
 
@@ -46,9 +63,11 @@ validated review manifest may be replaced or removed.
 ## Development
 
 ```sh
-npm ci --ignore-scripts
 npm test
 ```
+
+Deterministic tests need no installed packages. Use the setup command above for
+real rendering, including from a source checkout.
 
 Evaluation tooling is not a runtime dependency. With Vally 0.16.0 on `PATH`,
 run `npm run eval:lint` or `npm run eval`. Repository contributors install
